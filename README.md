@@ -1,6 +1,8 @@
 # Shortlark
 
-Turn long videos into short, shareable clips. Paste a link, AI finds the best moments, and you post them to social. No video files are edited: Shortlark is a **timecode tool, not a video renderer**.
+Shortlark turns long videos into short clips that are ready to post. Paste a YouTube or direct video link, and the AI finds the best moments and cuts them into vertical Shorts and Reels with captions. It also writes the title, caption and hashtags for each clip. You review and fine-tune clips in the editor, then post on social media or schedule it.
+
+Clips can also be downloaded as vertical MP4s.
 
 Stack: Next.js 15 (App Router) · TypeScript · Tailwind CSS 4 · Prisma (SQLite locally, Postgres in production) · Stripe subscriptions · Claude API (`claude-opus-5-5`).
 
