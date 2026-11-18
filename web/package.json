@@ -1,0 +1,28 @@
+{
+  "name": "@shortlark/web",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shortlark web app: React + Vite single-page app for the signed-in workspace.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@shortlark/shared": "*",
+    "clsx": "^2.1.1",
+    "react": "19.1.10",
+    "react-dom": "19.1.10",
+    "react-router": "7.6.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.5",
+    "@types/react": "^19",
+    "@types/react-dom": "19.1.6",
+    "@vitejs/plugin-react": "4.7.0",
+    "tailwindcss": "4.3.5",
+    "vite": "6.3.5"
+  }
+}

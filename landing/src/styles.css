@@ -1,0 +1,4 @@
+@import "../../shared/src/styles.css";
+
+/* Tailwind only scans this package by default; include the shared brand components. */
+@source "../../shared/src";

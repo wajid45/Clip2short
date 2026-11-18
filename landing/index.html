@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Shortlark · Turn long streams into Shorts and Reels</title>
+    <meta
+      name="description"
+      content="Paste a stream or video link. Shortlark's AI finds the moments worth clipping, scores them, writes hooks and captions, and posts them to YouTube Shorts, Instagram and Facebook."
+    />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0c0c0d" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f7f6f3" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Shortlark" />
+    <meta property="og:title" content="Shortlark · Turn long streams into Shorts and Reels" />
+    <meta property="og:description" content="AI finds the clips hiding in your long videos, writes the hooks and captions, and posts them for you." />
+    <meta property="og:image" content="/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Shortlark: find the Shorts and Reels hiding in your long videos" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..600&family=Instrument+Serif:ital@0;1&display=swap"
+    />
+    <script>
+      // Apply the saved theme before first paint (no light/dark flash).
+      try {
+        var m = document.cookie.match(/(?:^|; )sl_theme=(light|dark)/);
+        if (m) document.documentElement.setAttribute("data-theme", m[1]);
+      } catch (e) {}
+    </script>
+  </head>
+  <body class="antialiased">
+    <div id="root"><!--app-html--></div>
+    <script type="module" src="/src/entry-client.tsx"></script>
+  </body>
+</html>

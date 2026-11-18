@@ -1,0 +1,22 @@
+{
+  "name": "@shortlark/shared",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Code shared by the server, web app and landing page: pricing, time helpers, brand components and design tokens.",
+  "exports": {
+    "./plans": "./src/plans.ts",
+    "./time": "./src/time.ts",
+    "./social": "./src/social.ts",
+    "./video-source": "./src/video-source.ts",
+    "./json": "./src/json.ts",
+    "./styles.css": "./src/styles.css",
+    "./components/*": "./src/components/*.tsx"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1"
+  },
+  "peerDependencies": {
+    "react": "^19"
+  }
+}

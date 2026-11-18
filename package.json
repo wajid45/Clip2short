@@ -1,44 +1,37 @@
 {
   "name": "shortlark",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
+  "description": "Shortlark: AI clipping SaaS. Express API, React web app and pre-rendered React landing page.",
+  "workspaces": [
+    "shared",
+    "server",
+    "web",
+    "landing"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "prisma generate && next build",
-    "start": "next start",
-    "lint": "eslint",
-    "typecheck": "tsc --noEmit",
-    "db:push": "prisma db push",
-    "db:studio": "prisma studio",
-    "postinstall": "prisma generate"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^1.9.0",
-    "@prisma/client": "^6",
-    "bcryptjs": "^3.0.3",
-    "clsx": "^2.1.1",
-    "ffmpeg-static": "^5.3.0",
-    "jose": "^6.2.17",
-    "next": "15.5.29",
-    "react": "19.1.10",
-    "react-dom": "19.1.10",
-    "server-only": "^0.0.1",
-    "stripe": "^23.1.0",
-    "zod": "^4.6.7"
+    "dev": "concurrently -k -n server,web,landing -c yellow,cyan,magenta \"npm run dev -w server\" \"npm run dev -w web\" \"npm run dev -w landing\"",
+    "dev:server": "npm run dev -w server",
+    "dev:web": "npm run dev -w web",
+    "dev:landing": "npm run dev -w landing",
+    "build": "npm run build -w server && npm run build -w web && npm run build -w landing",
+    "start": "npm run start -w server",
+    "typecheck": "npm run typecheck -w server && npm run typecheck -w web && npm run typecheck -w landing",
+    "db:push": "npm run db:push -w server",
+    "db:studio": "npm run db:studio -w server"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "15.5.29",
-    "prisma": "^6",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "concurrently": "9.2.0",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=20.19"
   },
   "allowScripts": {
-    "ffmpeg-static@5.3.0": true
+    "ffmpeg-static@5.3.0": true,
+    "prisma@6.19.3": true,
+    "@prisma/client@6.19.3": true,
+    "@prisma/engines@6.19.3": true,
+    "esbuild@0.25.5": true
   }
 }
