@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import type { BillingData, Jsonify } from "@server/page-routes";
+import type { BillingData, Jsonify } from "@shortlark/shared/api-types";
 import { CREDIT_PACKS, getPlan, PLANS, TRIAL } from "@shortlark/shared/plans";
 import { IconCheck } from "@shortlark/shared/components/icons";
 import { Link, useSearchParams } from "@/lib/nav";

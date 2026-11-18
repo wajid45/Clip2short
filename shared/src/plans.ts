@@ -5,7 +5,11 @@
  *   1 credit = 1 minute of source video analysed by the AI (rounded up, minimum 1).
  * Credits come from a free trial, a monthly plan (credits reset each billing period),
  * or one-off packs (never expire). Posting and scheduling never cost credits.
+ *
+ * The numbers live in pricing.json, which the Python API reads too.
  */
+
+import pricing from "./pricing.json";
 
 export type PlanId = "creator" | "pro" | "studio";
 
@@ -26,36 +30,7 @@ export interface Plan {
   highlight?: boolean;
 }
 
-export const PLANS: Plan[] = [
-  {
-    id: "creator",
-    name: "Creator",
-    price: 19,
-    monthlyCredits: 300,
-    tagline: "For a weekly stream or podcast.",
-    limits: { maxVideoMinutes: 180, socialAccounts: 3, scheduledPosts: 30 },
-    features: ["300 credits every month (5 hours of video)", "Videos up to 3 hours", "3 connected social accounts", "30 posts in the queue"],
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    price: 49,
-    monthlyCredits: 1000,
-    tagline: "For daily streamers and busy clippers.",
-    highlight: true,
-    limits: { maxVideoMinutes: 360, socialAccounts: 10, scheduledPosts: 300 },
-    features: ["1,000 credits every month (16+ hours)", "Videos up to 6 hours", "10 connected social accounts", "300 posts in the queue"],
-  },
-  {
-    id: "studio",
-    name: "Studio",
-    price: 129,
-    monthlyCredits: 3000,
-    tagline: "For agencies running many channels.",
-    limits: { maxVideoMinutes: 600, socialAccounts: 40, scheduledPosts: 2000 },
-    features: ["3,000 credits every month (50 hours)", "Videos up to 10 hours", "40 connected social accounts", "2,000 posts in the queue"],
-  },
-];
+export const PLANS: Plan[] = pricing.plans as Plan[];
 
 export interface CreditPack {
   id: "pack-100" | "pack-500" | "pack-2000";
@@ -63,16 +38,12 @@ export interface CreditPack {
   price: number; // USD, one-off
 }
 
-export const CREDIT_PACKS: CreditPack[] = [
-  { id: "pack-100", credits: 100, price: 9 },
-  { id: "pack-500", credits: 500, price: 39 },
-  { id: "pack-2000", credits: 2000, price: 129 },
-];
+export const CREDIT_PACKS: CreditPack[] = pricing.creditPacks as CreditPack[];
 
-export const TRIAL = { credits: 60, days: 14 };
+export const TRIAL: { credits: number; days: number } = pricing.trial;
 
 /** Limits for people without a plan (trial or packs only). */
-export const BASE_LIMITS: Limits = { maxVideoMinutes: 120, socialAccounts: 2, scheduledPosts: 15 };
+export const BASE_LIMITS: Limits = pricing.baseLimits;
 
 export function getPlan(id: string | null | undefined): Plan | null {
   return PLANS.find((p) => p.id === id) ?? null;

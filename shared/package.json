@@ -1,6 +1,6 @@
 {
   "name": "@shortlark/shared",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "private": true,
   "type": "module",
   "description": "Code shared by the server, web app and landing page: pricing, time helpers, brand components and design tokens.",
@@ -11,7 +11,9 @@
     "./video-source": "./src/video-source.ts",
     "./json": "./src/json.ts",
     "./styles.css": "./src/styles.css",
-    "./components/*": "./src/components/*.tsx"
+    "./components/*": "./src/components/*.tsx",
+    "./api-types": "./src/api-types.ts",
+    "./pricing.json": "./src/pricing.json"
   },
   "dependencies": {
     "clsx": "^2.1.1"

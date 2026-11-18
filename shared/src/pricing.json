@@ -1,0 +1,85 @@
+{
+  "trial": {
+    "credits": 60,
+    "days": 14
+  },
+  "baseLimits": {
+    "maxVideoMinutes": 120,
+    "socialAccounts": 2,
+    "scheduledPosts": 15
+  },
+  "plans": [
+    {
+      "id": "creator",
+      "name": "Creator",
+      "price": 19,
+      "monthlyCredits": 300,
+      "tagline": "For a weekly stream or podcast.",
+      "limits": {
+        "maxVideoMinutes": 180,
+        "socialAccounts": 3,
+        "scheduledPosts": 30
+      },
+      "features": [
+        "300 credits every month (5 hours of video)",
+        "Videos up to 3 hours",
+        "3 connected social accounts",
+        "30 posts in the queue"
+      ]
+    },
+    {
+      "id": "pro",
+      "name": "Pro",
+      "price": 49,
+      "monthlyCredits": 1000,
+      "tagline": "For daily streamers and busy clippers.",
+      "highlight": true,
+      "limits": {
+        "maxVideoMinutes": 360,
+        "socialAccounts": 10,
+        "scheduledPosts": 300
+      },
+      "features": [
+        "1,000 credits every month (16+ hours)",
+        "Videos up to 6 hours",
+        "10 connected social accounts",
+        "300 posts in the queue"
+      ]
+    },
+    {
+      "id": "studio",
+      "name": "Studio",
+      "price": 129,
+      "monthlyCredits": 3000,
+      "tagline": "For agencies running many channels.",
+      "limits": {
+        "maxVideoMinutes": 600,
+        "socialAccounts": 40,
+        "scheduledPosts": 2000
+      },
+      "features": [
+        "3,000 credits every month (50 hours)",
+        "Videos up to 10 hours",
+        "40 connected social accounts",
+        "2,000 posts in the queue"
+      ]
+    }
+  ],
+  "creditPacks": [
+    {
+      "id": "pack-100",
+      "credits": 100,
+      "price": 9
+    },
+    {
+      "id": "pack-500",
+      "credits": 500,
+      "price": 39
+    },
+    {
+      "id": "pack-2000",
+      "credits": 2000,
+      "price": 129
+    }
+  ]
+}

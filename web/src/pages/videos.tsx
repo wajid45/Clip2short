@@ -1,5 +1,5 @@
 import { useParams } from "react-router";
-import type { VideoData, VideosData } from "@server/page-routes";
+import type { VideoData, VideosData } from "@shortlark/shared/api-types";
 import { formatDuration } from "@shortlark/shared/time";
 import { IconArrowLeft, IconExternal } from "@shortlark/shared/components/icons";
 import { Link, useSearchParams } from "@/lib/nav";

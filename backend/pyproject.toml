@@ -1,0 +1,41 @@
+[project]
+name = "shortlark-backend"
+version = "3.0.0"
+description = "Shortlark API: FastAPI + SQLAlchemy. Auth, credits, Stripe, AI analysis, video cutting, social publishing."
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi",
+  "uvicorn[standard]",
+  "sqlalchemy>=2",
+  "alembic",
+  "pydantic>=2",
+  "pyjwt",
+  "bcrypt",
+  "cryptography",
+  "httpx",
+  "stripe",
+  "anthropic",
+  "imageio-ffmpeg",
+  "python-dotenv",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff==0.13.0",
+]
+
+[tool.uv]
+exclude-newer = "2026-11-03T00:00:00Z"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 160
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501", "B008"]

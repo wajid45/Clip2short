@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import type { AnalyticsData } from "@server/page-routes";
+import type { AnalyticsData } from "@shortlark/shared/api-types";
 import { IconExternal } from "@shortlark/shared/components/icons";
 import { Link, useSearchParams } from "@/lib/nav";
 import { PageData } from "@/lib/page-data";

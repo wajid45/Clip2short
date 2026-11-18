@@ -1,24 +1,25 @@
 {
   "name": "shortlark",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "private": true,
-  "description": "Shortlark: AI clipping SaaS. Express API, React web app and pre-rendered React landing page.",
+  "description": "Shortlark: AI clipping SaaS. Python (FastAPI) API, React web app and pre-rendered React landing page.",
   "workspaces": [
     "shared",
-    "server",
     "web",
     "landing"
   ],
   "scripts": {
-    "dev": "concurrently -k -n server,web,landing -c yellow,cyan,magenta \"npm run dev -w server\" \"npm run dev -w web\" \"npm run dev -w landing\"",
-    "dev:server": "npm run dev -w server",
+    "dev": "concurrently -k -n api,web,landing -c yellow,cyan,magenta \"npm run dev:api\" \"npm run dev -w web\" \"npm run dev -w landing\"",
+    "dev:api": "uv --directory backend run uvicorn app.main:app --port 4000 --reload --reload-dir app",
     "dev:web": "npm run dev -w web",
     "dev:landing": "npm run dev -w landing",
-    "build": "npm run build -w server && npm run build -w web && npm run build -w landing",
-    "start": "npm run start -w server",
-    "typecheck": "npm run typecheck -w server && npm run typecheck -w web && npm run typecheck -w landing",
-    "db:push": "npm run db:push -w server",
-    "db:studio": "npm run db:studio -w server"
+    "setup": "uv --directory backend sync && npm install && npm run db:migrate",
+    "build": "npm run build -w web && npm run build -w landing",
+    "start": "uv --directory backend run uvicorn app.main:app --host 0.0.0.0 --port 4000",
+    "test": "uv --directory backend run pytest -q",
+    "typecheck": "npm run typecheck -w web && npm run typecheck -w landing",
+    "db:migrate": "uv --directory backend run alembic upgrade head",
+    "db:revision": "uv --directory backend run alembic revision --autogenerate -m"
   },
   "devDependencies": {
     "concurrently": "9.2.0",
@@ -28,10 +29,6 @@
     "node": ">=20.19"
   },
   "allowScripts": {
-    "ffmpeg-static@5.3.0": true,
-    "prisma@6.19.3": true,
-    "@prisma/client@6.19.3": true,
-    "@prisma/engines@6.19.3": true,
     "esbuild@0.25.5": true
   }
 }

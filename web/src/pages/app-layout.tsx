@@ -1,5 +1,5 @@
 import { Outlet } from "react-router";
-import type { MeData } from "@server/page-routes";
+import type { MeData } from "@shortlark/shared/api-types";
 import { AppShell } from "@/components/app-nav";
 import { PageLoader } from "@/components/page-loader";
 import { usePageData } from "@/lib/page-data";

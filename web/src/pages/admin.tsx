@@ -1,4 +1,4 @@
-import type { IntegrationsData, LeadsData } from "@server/page-routes";
+import type { IntegrationsData, LeadsData } from "@shortlark/shared/api-types";
 import { Logo } from "@shortlark/shared/components/logo";
 import { PlatformIcon } from "@shortlark/shared/components/platform-icon";
 import { IconArrowLeft, IconDownload, IconExternal } from "@shortlark/shared/components/icons";

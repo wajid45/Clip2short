@@ -4,27 +4,28 @@ Shortlark turns long videos into short clips that are ready to post. Paste a You
 
 Clips can also be downloaded as vertical MP4s.
 
-Stack: Node + Express API · React 19 + Vite (web app and landing page) · TypeScript · Tailwind CSS 4 · Prisma (SQLite locally, Postgres in production) · Stripe · Claude API (`claude-opus-5-5`).
+Stack: Python 3.12 + FastAPI API · SQLAlchemy 2 + Alembic (SQLite locally, Postgres in production) · React 19 + Vite + TypeScript (web app and landing page) · Tailwind CSS 4 · Stripe · Claude API (`claude-opus-5-5`).
 
 ## Project layout
 
-One repository, npm workspaces:
+One repository: a Python backend plus npm workspaces for the front ends.
 
 | Folder | What it is | Dev URL |
 |---|---|---|
-| `server/` | Express API: auth, credits, Stripe, AI analysis, video cutting, social publishing, the 15-minute scheduler. The Prisma schema and database live in `server/prisma`. | http://localhost:4000 |
+| `backend/` | FastAPI API: auth, credits, Stripe, AI analysis, video cutting, social publishing, the 15-minute scheduler. Models in `app/models.py`, migrations in `migrations/`, the SQLite file in `data/`. Interactive API docs at `/api/docs`. | http://localhost:4000 |
 | `web/` | The signed-in web app: a React + Vite single-page app with React Router. | http://localhost:3000 |
 | `landing/` | The marketing site: React + Vite, **pre-rendered to static HTML** at build time for SEO and link previews. | http://localhost:3001 |
-| `shared/` | Code all three use: pricing (`plans.ts`), time helpers, link parsing, platform metadata, brand components and the Tailwind design tokens. | |
+| `shared/` | Pricing (`pricing.json`, read by the API and both front ends), the page-data types (`api-types.ts`), time helpers, link parsing, platform metadata, brand components and the Tailwind design tokens. | |
 
-The web app and the API share one origin. In development Vite proxies `/api` to the Express server; in production the Express server also serves `web/dist`. That keeps the session cookie first-party and needs no CORS. The landing page is a separate static site: it links into the web app and may call only the public lead endpoint (CORS allows `LANDING_URL`).
+The web app and the API share one origin. In development Vite proxies `/api` to the API; in production the API also serves `web/dist`. That keeps the session cookie first-party and needs no CORS. The landing page is a separate static site: it links into the web app and may call only the public lead endpoint (CORS allows `LANDING_URL`).
 
 ## Quick start (local)
 
+Needs Node 20+ and [uv](https://docs.astral.sh/uv/) (it installs Python 3.12 and the backend's packages for you).
+
 ```bash
-npm install
-cp server/.env.example server/.env    # then fill in what you have
-npm run db:push                       # creates server/prisma/dev.db
+cp backend/.env.example backend/.env  # then fill in what you have
+npm run setup                         # Python packages, npm packages, database migrations
 npm run dev                           # API :4000, web app :3000, landing :3001
 ```
 
@@ -38,7 +39,7 @@ With no keys set, local development still works end to end:
 
 ## Environment
 
-See `server/.env.example` for every API variable. Required in production: `DATABASE_URL`, `APP_URL`, `LANDING_URL`, `SESSION_SECRET`, `ENCRYPTION_KEY`, `CRON_SECRET`, `ANTHROPIC_API_KEY`, and the Stripe variables.
+See `backend/.env.example` for every API variable. Required in production: `DATABASE_URL`, `APP_URL`, `LANDING_URL`, `SESSION_SECRET`, `ENCRYPTION_KEY`, `CRON_SECRET`, `ANTHROPIC_API_KEY`, and the Stripe variables.
 
 Build-time variables for the front ends: `VITE_APP_URL` and `VITE_API_URL` (landing), `VITE_LANDING_URL` (web).
 
@@ -46,23 +47,25 @@ Build-time variables for the front ends: `VITE_APP_URL` and `VITE_API_URL` (land
 
 | Area | Where |
 |---|---|
-| Express app; serves the built web app in production | `server/src/index.ts` |
-| API endpoints (one handler file per path, web-standard `Request`/`Response`) | `server/src/routes/**/route.ts`, mounted in `server/src/api.ts` |
-| Page data for the web app (one GET per screen; 401 / 402 / 404 handled) | `server/src/pages/*`, mounted at `/api/page/*` by `server/src/page-routes.ts` |
-| Request context (cookies, headers, background work) | `server/src/http/{context,adapter,after}.ts` |
-| Link parsing (YouTube / Vimeo / .mp4 / .webm) | `shared/src/video-source.ts` |
-| Metadata from the link (title, length, description) | `server/src/lib/video/pipeline.ts` → `resolveMetadata` |
-| Captions, multi-strategy | `server/src/lib/captions/*`, orchestrated by `pullCaptions` |
-| AI fetch-agent fallback (Claude `web_fetch`) | `server/src/lib/ai/agent-fetch.ts` |
-| AI auto-clipper (structured output, segment indices → real timestamps) | `server/src/lib/ai/clipper.ts` |
-| Social providers | `server/src/lib/social/{youtube,meta,sandbox}.ts` |
-| Publisher, 15-minute scheduler, stats refresh | `server/src/lib/social/publisher.ts`, `server/src/scheduler.ts`, `/api/cron/publish` |
-| Plans and limits | `shared/src/plans.ts`, `server/src/lib/usage.ts` |
-| Stripe checkout / portal / webhook | `server/src/routes/billing/*`, `server/src/routes/stripe/webhook` |
+| FastAPI app, error handling, static web app in production | `backend/app/main.py` |
+| API endpoints | `backend/app/routes/{account,billing,videos,clips,posts}.py` |
+| Page data for the web app (one GET per screen; 401 / 402 / 404 handled) | `backend/app/routes/pages.py`, mounted at `/api/page/*` |
+| Data model and migrations | `backend/app/models.py`, `backend/migrations/` (Alembic) |
+| Sessions, passwords, token encryption | `backend/app/security.py` |
+| Credits ledger (per-user lock + conditional updates, refunds to the same grants) | `backend/app/credits.py` |
+| Link parsing (YouTube / Vimeo / .mp4 / .webm) | `backend/app/video/source.py` (the web app's copy: `shared/src/video-source.ts`) |
+| Metadata from the link (title, length, description) | `backend/app/video/pipeline.py` → `resolve_metadata` |
+| Captions, multi-strategy | `backend/app/captions/*`, orchestrated by `pull_captions` |
+| AI fetch-agent fallback (Claude `web_fetch`) | `backend/app/ai/agent_fetch.py` |
+| AI auto-clipper (structured output, segment indices → real timestamps) | `backend/app/ai/clipper.py` |
+| Social providers | `backend/app/social/{youtube,meta,sandbox}.py` |
+| Publisher, 15-minute scheduler, stats refresh | `backend/app/social/publisher.py`, `backend/app/scheduler.py`, `/api/cron/publish` |
+| Plans and limits | `shared/src/pricing.json`, `backend/app/plans.py`, `backend/app/auth.py` |
+| Stripe checkout / portal / webhook | `backend/app/routes/billing.py`, `backend/app/billing.py` |
 | Web app screens and routing | `web/src/pages/*`, `web/src/App.tsx` |
 | Landing page and pre-rendering | `landing/src/Landing.tsx`, `landing/prerender.mjs` |
 
-The web app's screens are typed against the server's loaders (`import type { … } from "@server/page-routes"`), so changing what a loader returns shows up as a type error in the screen that uses it.
+The web app's screens are typed with `shared/src/api-types.ts`, which describes what each `/api/page/*` endpoint returns. When you change a page endpoint in `backend/app/routes/pages.py`, update the matching type there.
 
 **Caption order:** YouTube watch-page tracks → InnerTube player API → each track as json3, srv3, then VTT → YouTube translation (`tlang=en`) → Vimeo text tracks → `.vtt`/`.srt` next to a direct file → AI fetch agent → paste a transcript. Every video records its source and whether timings are **exact** or **estimated**, and the UI shows that plainly.
 
@@ -71,12 +74,12 @@ The web app's screens are typed against the server's loaders (`import type { …
 ## AI focus, posting copy and downloads
 
 - **Focus**: when importing or re-running, choose what the AI looks for: Best moments, **Main events** (turning points, big plays, peak reactions in streams), Funniest, or Insights. Stored per video (`analysisFocus`).
-- **AI posting copy** (1 credit, refunded on failure): on any clip, *Suggest* writes an improved title, hook, caption and hashtags, plus post text for YouTube (title + description), Instagram and Facebook. Nothing changes until the user clicks **Use** / **Use all** (then Save) or **Approve for posting** (pre-fills the post panel; the timestamp link is appended automatically). `server/src/lib/ai/suggest.ts`.
-- **Download clip** (`/api/clips/:id/download?format=original|vertical`): ffmpeg cuts the range straight from the source URL (HTTP range reads, nothing stored), re-encodes for frame-accurate cuts and streams an MP4; *vertical* centre-crops to 1080×1920. Only for direct-file sources: YouTube and Vimeo don't permit downloading their videos. Uses `ffmpeg-static` (its install script is approved in the root `package.json` → `allowScripts`, along with Prisma's and esbuild's); set `FFMPEG_PATH` to use a system ffmpeg instead. Only network protocols are allowed as input.
+- **AI posting copy** (1 credit, refunded on failure): on any clip, *Suggest* writes an improved title, hook, caption and hashtags, plus post text for YouTube (title + description), Instagram and Facebook. Nothing changes until the user clicks **Use** / **Use all** (then Save) or **Approve for posting** (pre-fills the post panel; the timestamp link is appended automatically). `backend/app/ai/suggest.py`.
+- **Download clip** (`/api/clips/:id/download?format=original|vertical`): ffmpeg cuts the range straight from the source URL (HTTP range reads, nothing stored), re-encodes for frame-accurate cuts and streams an MP4; *vertical* centre-crops to 1080×1920. Only for direct-file sources: YouTube and Vimeo don't permit downloading their videos. Uses the ffmpeg binary bundled with `imageio-ffmpeg`; set `FFMPEG_PATH` to use a system ffmpeg instead. Only network protocols are allowed as input.
 
 ## Billing (credits + Stripe)
 
-Users pay for the video they process. **1 credit = 1 minute of video analysed** (rounded up); re-running a video costs a quarter, and failed analyses are refunded automatically. Posting and scheduling are free. All numbers live in `shared/src/plans.ts`, used by the API, the web app and the landing page.
+Users pay for the video they process. **1 credit = 1 minute of video analysed** (rounded up); re-running a video costs a quarter, and failed analyses are refunded automatically. Posting and scheduling are free. All numbers live in `shared/src/pricing.json`, read by the API, the web app and the landing page.
 
 - **Free trial**: 60 credits for 14 days on signup, no card (`TRIAL`).
 - **Monthly plans** (`PLANS`): Creator $19 / 300 credits, Pro $49 / 1,000, Studio $129 / 3,000. Credits are granted on each paid invoice (`subscription_create`, `subscription_cycle`) and expire at period end.
@@ -109,11 +112,11 @@ Admins can enter all of these in the app at **Admin → Integrations**, which al
 
 `npm run build` produces three things to deploy:
 
-1. **API + web app** (for example `app.shortlark.com`): any Node 20+ host (VPS, Docker, Render, Railway, Fly). Run `npm run build`, then `npm start`, which serves the API and `web/dist` on `PORT`. Set `APP_URL` to this origin, and `TRUST_PROXY=true` behind a load balancer. The publisher runs in-process every 15 minutes; with several instances, set `INTERNAL_SCHEDULER=false` on all but one, or call `/api/cron/publish` with `Authorization: Bearer $CRON_SECRET` from an external cron.
+1. **API + web app** (for example `app.shortlark.com`): any host that runs Python 3.12 (VPS, Docker, Render, Railway, Fly). Run `npm run build` (builds `web/dist`), `npm run db:migrate`, then `npm start`, which serves the API and `web/dist` on port 4000. Set `ENV=production`. Set `APP_URL` to this origin, and `TRUST_PROXY=true` behind a load balancer. The publisher runs in-process every 15 minutes; with several instances, set `INTERNAL_SCHEDULER=false` on all but one, or call `/api/cron/publish` with `Authorization: Bearer $CRON_SECRET` from an external cron.
 2. **Landing page** (for example `shortlark.com`): upload `landing/dist` to any static host or CDN (Vercel, Netlify, Cloudflare Pages, S3). Build it with `VITE_APP_URL` and `VITE_API_URL` set to the app origin, and set `LANDING_URL` on the API to the landing origin.
-3. **Database**: switch `provider` to `postgresql` in `server/prisma/schema.prisma` and run `npm run db:push` (or migrations). On Postgres, add `mode: "insensitive"` to the `contains` filters in `server/src/lib/clips.ts` for case-insensitive library search.
+3. **Database**: set `DATABASE_URL` to a Postgres URL (add a driver such as `psycopg[binary]` with `uv add`) and run `npm run db:migrate`. On Postgres, switch the `contains` filters in `backend/app/clips.py` to `icontains` for case-insensitive library search.
 
-The rate limiter in `server/src/lib/ratelimit.ts` is in-memory. Put a shared store (Redis/Upstash) behind it if you run several instances.
+The rate limiter in `backend/app/ratelimit.py` is in-memory. Put a shared store (Redis/Upstash) behind it if you run several instances.
 
 ## Scripts
 
@@ -121,8 +124,11 @@ From the repository root:
 
 | Script | What it does |
 |---|---|
-| `npm run dev` | API, web app and landing together (or `dev:server`, `dev:web`, `dev:landing`) |
-| `npm run build` | Bundles the API (esbuild), builds the web app, builds and pre-renders the landing page |
-| `npm start` | Runs the built API, which also serves the built web app |
-| `npm run typecheck` | Type-checks all three |
-| `npm run db:push` / `npm run db:studio` | Prisma schema sync / database browser |
+| `npm run dev` | API, web app and landing together (or `dev:api`, `dev:web`, `dev:landing`) |
+| `npm run build` | Builds the web app, and builds and pre-renders the landing page |
+| `npm start` | Runs the API (uvicorn), which also serves the built web app |
+| `npm run typecheck` | Type-checks the web app and landing page |
+| `npm run setup` | Installs the backend's Python packages (uv) and the npm packages, then migrates the database |
+| `npm test` | Backend test suite (pytest) |
+| `npm run db:migrate` | Applies database migrations (Alembic) |
+| `npm run db:revision -- "message"` | Generates a migration after changing `backend/app/models.py` |

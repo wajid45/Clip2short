@@ -1,4 +1,4 @@
-import type { AccountsData } from "@server/page-routes";
+import type { AccountsData } from "@shortlark/shared/api-types";
 import { PLATFORMS, type SocialPlatform } from "@shortlark/shared/social";
 import { PlatformIcon } from "@shortlark/shared/components/platform-icon";
 import { Link, useSearchParams } from "@/lib/nav";

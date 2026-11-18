@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { useParams } from "react-router";
-import type { ClipData, LibraryData, MomentsData } from "@server/page-routes";
+import type { ClipData, LibraryData, MomentsData } from "@shortlark/shared/api-types";
 import { Link, useSearchParams } from "@/lib/nav";
 import { PageData } from "@/lib/page-data";
 import { ClipEditor } from "@/components/clip-editor";
