@@ -13,16 +13,19 @@
   "dependencies": {
     "@shortlark/shared": "*",
     "clsx": "^2.1.1",
+    "lenis": "^1.3.27",
     "react": "19.1.10",
-    "react-dom": "19.1.10"
+    "react-dom": "19.1.10",
+    "three": "^0.187.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.5",
+    "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "19.1.6",
+    "@types/three": "^0.187.0",
     "@vitejs/plugin-react": "4.7.0",
     "tailwindcss": "4.3.5",
-    "vite": "6.3.5",
-    "@types/node": "^20"
+    "vite": "6.4.6"
   }
 }

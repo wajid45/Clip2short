@@ -20,9 +20,13 @@ export function LogoMark({ size = 24, className }: { size?: number; className?: 
 
 export function Logo({ className, size = 26, compact = false }: { className?: string; tone?: "light" | "dark"; size?: number; compact?: boolean }) {
   return (
-    <span className={clsx("inline-flex items-center gap-1.5", className)}>
+    <span className={clsx("inline-flex items-center gap-2", className)}>
       <LogoMark size={size} />
-      {!compact && <span className="text-[18px] font-semibold tracking-[-0.035em] text-text">shortlark</span>}
+      {!compact && (
+        <span className="font-semibold tracking-[-0.035em] text-text" style={{ fontSize: Math.round(size * 0.72) }}>
+          shortlark
+        </span>
+      )}
     </span>
   );
 }

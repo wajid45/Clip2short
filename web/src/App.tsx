@@ -8,6 +8,7 @@ import { AnalyticsPage } from "./pages/analytics";
 import { AccountsPage } from "./pages/accounts";
 import { BillingPage } from "./pages/billing";
 import { IntegrationsPage, LeadsPage } from "./pages/admin";
+import { ForgotPasswordPage, HelpPage, MessagesPage, ResetPasswordPage, SettingsPage } from "./pages/account";
 import { NotFound } from "./lib/page-data";
 
 const router = createBrowserRouter([
@@ -17,9 +18,12 @@ const router = createBrowserRouter([
     children: [
       { path: "/login", element: <LoginPage /> },
       { path: "/signup", element: <SignupPage /> },
+      { path: "/forgot-password", element: <ForgotPasswordPage /> },
     ],
   },
   { path: "/oauth/complete", element: <OAuthCompletePage /> },
+  // Reset works whether or not someone is signed in on this browser.
+  { element: <AuthLayout allowSignedIn />, children: [{ path: "/reset-password", element: <ResetPasswordPage /> }] },
   {
     path: "/app",
     element: <AppLayout />,
@@ -33,6 +37,8 @@ const router = createBrowserRouter([
       { path: "analytics", element: <AnalyticsPage /> },
       { path: "accounts", element: <AccountsPage /> },
       { path: "billing", element: <BillingPage /> },
+      { path: "settings", element: <SettingsPage /> },
+      { path: "help", element: <HelpPage /> },
       { path: "*", element: <NotFound /> },
     ],
   },
@@ -42,6 +48,7 @@ const router = createBrowserRouter([
     children: [
       { path: "leads", element: <LeadsPage /> },
       { path: "integrations", element: <IntegrationsPage /> },
+      { path: "messages", element: <MessagesPage /> },
     ],
   },
   { path: "*", element: <Navigate to="/app" replace /> },

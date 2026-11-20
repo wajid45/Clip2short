@@ -14,9 +14,9 @@ dependencies = [
   "cryptography",
   "httpx",
   "stripe",
-  "anthropic",
   "imageio-ffmpeg",
   "python-dotenv",
+  "google-genai>=2.34.0",
 ]
 
 [dependency-groups]

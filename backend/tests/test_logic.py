@@ -94,3 +94,30 @@ def test_costs_dates_and_crypto():
     assert analysis_cost(30, False) == 1 and analysis_cost(121, False) == 3 and analysis_cost(7200, True) == 30
     assert iso(datetime(2026, 11, 17, 12, 45, 0, 123456, tzinfo=UTC)) == "2026-11-17T12:45:00.123Z"
     assert decrypt(encrypt("secret token")) == "secret token"
+
+
+def test_category_engines_pick_model_and_brief(monkeypatch):
+    from app.ai import clipper, engines
+    from app.config import settings
+
+    object.__setattr__(settings, "gemini_category_models", {"sports": "sports-model-x"})
+    try:
+        assert engines.model_for("sports") == "sports-model-x"
+        assert engines.model_for("gaming") == settings.gemini_model  # falls back
+        assert engines.model_for(None) == settings.gemini_model
+        assert engines.engine_for("unknown").id == "other"
+
+        seen = {}
+
+        def fake_generate(schema, *, system, prompt, thinking, refusal_message, model):
+            seen.update(prompt=prompt, thinking=thinking, model=model)
+            return clipper.AnalysisResult(summary="s", clips=[])
+
+        monkeypatch.setattr(clipper, "generate", fake_generate)
+        segs = [{"start": i * 5.0, "end": i * 5.0 + 5, "text": f"line {i}"} for i in range(10)]
+        clipper.analyze_transcript(title="Final", description="", duration_sec=50, segments=segs, timing="exact", category="sports")
+        assert seen["model"] == "sports-model-x"
+        assert '<category name="Sports">' in seen["prompt"] and "Goal event" in seen["prompt"]
+        assert seen["thinking"] == "high"
+    finally:
+        object.__setattr__(settings, "gemini_category_models", {})

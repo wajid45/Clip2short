@@ -8,7 +8,7 @@ import { useEffect, useRef } from "react";
 
 const TOTAL = 6 * 3600 + 12 * 60; // 6:12:00
 const BARS = 180;
-const MOMENTS = [
+export const MOMENTS = [
   { t: 0.07, w: 0.012, score: 72, label: "Opening rant" },
   { t: 0.19, w: 0.014, score: 81, label: "Chat called it" },
   { t: 0.33, w: 0.01, score: 88, label: "Clutch escape" },
@@ -37,7 +37,7 @@ function tc(sec: number) {
 
 function Wave({ bright }: { bright?: boolean }) {
   return (
-    <div className="absolute inset-0 flex items-center gap-[2px]" aria-hidden="true">
+    <div className="absolute inset-0 flex items-center gap-px sm:gap-[2px]" aria-hidden="true">
       {heights.map((h, i) => (
         <span key={i} className={bright ? "flex-1 rounded-full bg-text/70" : "flex-1 rounded-full bg-line-strong"} style={{ height: `${h * 100}%` }} />
       ))}
@@ -69,7 +69,7 @@ export function StreamScanner() {
         if ((c.dataset.on === "1") !== on) c.dataset.on = on ? "1" : "0";
       });
       if (foundRef.current) foundRef.current.textContent = String(found);
-      if (bestRef.current) bestRef.current.textContent = best ? String(best) : "–";
+      if (bestRef.current) bestRef.current.textContent = best ? String(best) : "·";
     };
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       set(1);
@@ -113,7 +113,7 @@ export function StreamScanner() {
             AI scan
           </span>
           <div>
-            <p className="text-sm font-medium text-text">Launch-day marathon stream</p>
+            <p className="text-sm font-medium text-text">Six hour stream</p>
             <p className="tc text-xs text-faint">
               <span ref={timeRef}>0:00:00</span> / {tc(TOTAL)}
             </p>
@@ -129,7 +129,7 @@ export function StreamScanner() {
           <div className="text-right">
             <p className="text-[11px] text-faint">Best score</p>
             <p className="tc text-2xl font-semibold text-ready">
-              <span ref={bestRef}>–</span>
+              <span ref={bestRef}>·</span>
             </p>
           </div>
         </div>

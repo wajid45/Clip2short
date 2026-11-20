@@ -10,6 +10,7 @@ from urllib.parse import urlsplit
 
 from sqlalchemy import delete, exists, select, update
 
+from .. import notify
 from ..ai.agent_fetch import agent_fetch_captions
 from ..ai.client import ai_configured, describe_ai_error
 from ..ai.clipper import analyze_transcript
@@ -17,7 +18,7 @@ from ..captions.direct import pull_sibling_captions, title_from_file_url
 from ..captions.parse import Segment
 from ..captions.vimeo import fetch_vimeo_meta, pull_vimeo_captions
 from ..captions.youtube import YouTubePlayerData, fetch_oembed, fetch_watch_page, pull_youtube_captions
-from ..credits import InsufficientCredits, refund_credits, spend_credits
+from ..credits import InsufficientCredits, credit_summary, refund_credits, spend_credits
 from ..db import SessionLocal, utcnow
 from ..models import Clip, Post, Video
 from ..plans import analysis_cost
@@ -156,7 +157,7 @@ def _fail(s, video: Video, message: str) -> None:
     s.commit()
 
 
-def run_analysis(video_id: str, focus: str = "auto") -> None:
+def run_analysis(video_id: str, focus: str = "auto") -> None:  # category comes from the video
     """Runs the AI clipper. Keeps clips the user has touched; replaces untouched AI ideas."""
     with SessionLocal() as s:
         video = s.get(Video, video_id)
@@ -166,12 +167,13 @@ def run_analysis(video_id: str, focus: str = "auto") -> None:
         if not segments:
             return _fail(s, video, "Captions are needed before AI can find moments.")
         if not ai_configured():
-            return _fail(s, video, "AI analysis isn't configured on this server (missing ANTHROPIC_API_KEY).")
+            return _fail(s, video, "AI analysis isn't configured on this server (missing GEMINI_API_KEY).")
 
         # Charge credits before the AI call; refund automatically if analysis fails.
         duration = video.durationSec or float(segments[-1]["end"]) or 60
         rerun = video.analysisCount > 0
         cost = analysis_cost(duration, rerun)
+        balance_before = credit_summary(s, video.userId).total
         try:
             spend_id = spend_credits(
                 s,
@@ -195,6 +197,7 @@ def run_analysis(video_id: str, focus: str = "auto") -> None:
                 segments=segments,
                 timing=video.captionTiming or "exact",
                 focus=focus,
+                category=video.category,
             )
             s.execute(
                 delete(Clip).where(
@@ -218,6 +221,7 @@ def run_analysis(video_id: str, focus: str = "auto") -> None:
                         caption=c.caption,
                         hashtags=c.hashtags,
                         category=c.category,
+                        momentLabel=c.moment or None,
                         score=c.score,
                         scoreHook=c.scoreHook,
                         scoreSelf=c.scoreSelf,
@@ -239,6 +243,11 @@ def run_analysis(video_id: str, focus: str = "auto") -> None:
                 )
             )
             s.commit()
+            # Account emails (never fail the analysis).
+            notify.clips_ready(video.userId, video_id, video.title, len(clips), max((c.score for c in clips), default=None))
+            balance_after = credit_summary(s, video.userId).total
+            if notify.crossed_low(balance_before, balance_after):
+                notify.low_credits(video.userId, balance_after)
         except Exception as e:
             s.rollback()
             log.exception("analysis failed")

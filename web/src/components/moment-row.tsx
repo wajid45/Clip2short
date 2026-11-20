@@ -11,6 +11,7 @@ export interface MomentClip {
   status: string;
   score: number | null;
   category: string | null;
+  momentLabel?: string | null;
   reason: string | null;
   hook: string;
   video?: { id: string; title: string; thumbnailUrl: string | null };
@@ -34,9 +35,10 @@ export function MomentRow({ clip, rank, showVideo }: { clip: MomentClip; rank?: 
           <StatusBadge status={clip.status} />
         </div>
         <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-muted">
-          <span className="tc text-signal">
+          <span className="tc rounded-md border border-signal/40 bg-signal-soft px-1.5 text-signal">
             {formatTimecode(clip.startSec)} → {formatTimecode(clip.endSec)}
           </span>
+          {clip.momentLabel && <span className="font-medium text-text">{clip.momentLabel}</span>}
           <span className="text-faint">·</span>
           <span>{formatDuration(clip.endSec - clip.startSec)}</span>
           {showVideo && clip.video && (

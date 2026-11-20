@@ -1,0 +1,125 @@
+import clsx from "clsx";
+import { PLANS, TRIAL, type Plan } from "@shortlark/shared/plans";
+import { SplitRise } from "../motion/split";
+import { appHref } from "../config";
+
+const hours = (credits: number) => Math.floor(credits / 60);
+const MAX_HOURS = hours(Math.max(...PLANS.map((p) => p.monthlyCredits)));
+
+function Check({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" className={clsx("size-5 shrink-0", className)} aria-hidden="true">
+      <circle cx="10" cy="10" r="9" fill="currentColor" opacity="0.14" />
+      <path d="M6 10.4l2.6 2.5L14 7.4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/** One plan. The highlighted plan is the dark card from the call to action, framed in the sunset gradient. */
+export function PlanCard({ plan, index }: { plan: Plan; index: number }) {
+  const dark = !!plan.highlight;
+  const h = hours(plan.monthlyCredits);
+  const card = (
+    <article
+      className={clsx(
+        "relative flex h-full flex-col overflow-hidden rounded-[28px] p-7 sm:p-8 [@media(min-width:1024px)_and_(max-height:820px)]:py-6",
+        dark ? "bg-[#0d0e12] text-white" : "border border-line bg-surface transition-[border-color,box-shadow] duration-300 hover:border-line-strong hover:shadow-[0_30px_80px_-50px_rgba(0,0,0,0.35)]",
+      )}
+    >
+      {dark && <div className="plan-glow pointer-events-none absolute inset-x-0 -top-24 h-64" aria-hidden="true" />}
+
+      <div className="relative flex items-center justify-between gap-3">
+        <p className={clsx("hud", dark ? "text-white/55" : "text-muted")}>
+          <span className="text-signal">{String(index + 1).padStart(2, "0")}</span> / Plan
+        </p>
+        {dark && <span className="rounded-full bg-signal px-3 py-1 text-[13px] text-on-signal">Most popular</span>}
+      </div>
+
+      <h3 className="relative mt-5 text-[34px] leading-none tracking-[-0.03em]">{plan.name}</h3>
+      <p className={clsx("relative mt-3 text-[16px]", dark ? "text-white/65" : "text-muted")}>{plan.tagline}</p>
+
+      <p className="relative mt-5 flex items-baseline gap-2">
+        <span className="text-[clamp(48px,4vw,64px)] leading-none tracking-[-0.045em]">${plan.price}</span>
+        <span className={clsx("hud", dark ? "text-white/55" : "text-muted")}>/ month</span>
+      </p>
+
+      {/* How much video the plan covers, against the biggest plan */}
+      <div className="relative mt-5">
+        <div className="flex items-baseline justify-between">
+          <span className={clsx("hud", dark ? "text-white/55" : "text-muted")}>Video each month</span>
+          <span className="text-[16px]">
+            {h} hours
+          </span>
+        </div>
+        <span className={clsx("mt-3 block h-2 overflow-hidden rounded-full", dark ? "bg-white/10" : "bg-surface-3")}>
+          <span className={clsx("block h-full rounded-full", dark ? "bg-sunset" : "bg-signal")} style={{ width: `${Math.max(8, (h / MAX_HOURS) * 100)}%` }} />
+        </span>
+      </div>
+
+      <ul className={clsx("relative mt-6 mb-7 flex-1 space-y-2.5 border-t pt-6 [@media(min-width:1024px)_and_(max-height:820px)]:mt-5 [@media(min-width:1024px)_and_(max-height:820px)]:mb-6 [@media(min-width:1024px)_and_(max-height:820px)]:pt-5", dark ? "border-white/10" : "border-line")}>
+        {[`${plan.monthlyCredits.toLocaleString("en-US")} credits every month`, ...plan.features.filter((f) => !/credits|^Videos up to/i.test(f))].map((f) => (
+          <li key={f} className="flex gap-3 text-[16px]">
+            <Check className="text-signal" />
+            <span className={dark ? "text-white/85" : "text-text"}>{f}</span>
+          </li>
+        ))}
+        <li className="flex gap-3 text-[16px]">
+          <Check className="text-signal" />
+          <span className={dark ? "text-white/85" : "text-text"}>Posting and scheduling free</span>
+        </li>
+      </ul>
+
+      <a
+        href={appHref(`/signup?plan=${plan.id}`)}
+        className={clsx(
+          "relative inline-flex h-12 items-center justify-center rounded-full text-[16px] transition-colors",
+          dark ? "bg-signal text-on-signal hover:bg-signal-strong" : "border border-signal text-signal hover:bg-signal hover:text-on-signal",
+        )}
+      >
+        Choose {plan.name}
+      </a>
+      <p className={clsx("hud relative mt-3 text-center [@media(min-width:1024px)_and_(max-height:820px)]:hidden", dark ? "text-white/45" : "text-faint")}>Cancel anytime</p>
+    </article>
+  );
+  return dark ? <div className="rounded-[32px] bg-sunset p-[2px] shadow-[0_50px_120px_-50px_rgba(217,72,15,0.55)] lg:-my-3">{card}</div> : card;
+}
+
+/** The three plan cards in a row (home page and /pricing). */
+export function PlanGrid() {
+  return (
+    <div className="mt-10 grid gap-5 lg:grid-cols-3 lg:items-stretch [@media(min-width:1024px)_and_(max-height:820px)]:mt-7">
+      {PLANS.map((p, i) => (
+        <PlanCard key={p.id} plan={p} index={i} />
+      ))}
+    </div>
+  );
+}
+
+/** Home page pricing: the plans, with the calculator and full comparison on /pricing. */
+export function Pricing() {
+  return (
+    <section id="pricing" className="relative scroll-mt-0 py-20 sm:py-24 [@media(min-width:1024px)_and_(max-height:820px)]:pt-[84px]">
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-8">
+        <div className="grid gap-10 lg:grid-cols-[1.1fr_1fr] lg:items-end">
+          <div>
+            <p className="hud text-muted">
+              <span className="text-signal">/</span> Pricing
+            </p>
+            <SplitRise as="h2" className="display mt-4 text-[clamp(40px,4.6vw,72px)] [@media(min-width:1024px)_and_(max-height:820px)]:text-[46px]" parts={["Pay for the minutes you clip"]} />
+          </div>
+          <p className="text-[17px] text-muted lg:justify-self-end lg:whitespace-nowrap">
+            1 credit = 1 minute of video · {TRIAL.credits} free credits to start
+          </p>
+        </div>
+
+        <PlanGrid />
+
+        <div className="mt-8 flex justify-center">
+          <a href="/pricing" className="ulink inline-flex">
+            Compare plans and find yours <span aria-hidden="true">→</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}

@@ -129,7 +129,7 @@ export function LibraryTable({ rows, total }: { rows: LibraryRow[]; total: numbe
             <option value="score">Highest score</option>
             <option value="newest">Newest</option>
             <option value="oldest">Oldest</option>
-            <option value="title">Title A–Z</option>
+            <option value="title">Title A to Z</option>
             <option value="start">Video order</option>
           </select>
         </div>
@@ -182,7 +182,7 @@ export function LibraryTable({ rows, total }: { rows: LibraryRow[]; total: numbe
           <thead>
             <tr className="border-b border-line bg-surface text-left text-xs text-muted">
               <th className="w-10 px-3 py-2.5">
-                <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all" className="accent-[#ff5b23]" />
+                <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all" className="accent-signal" />
               </th>
               <th className="px-2 py-2.5 font-medium">Score</th>
               <th className="px-2 py-2.5 font-medium">Clip</th>
@@ -197,7 +197,7 @@ export function LibraryTable({ rows, total }: { rows: LibraryRow[]; total: numbe
             {rows.map((r) => (
               <tr key={r.id} className={clsx("border-b border-line last:border-0 hover:bg-surface", selected.has(r.id) && "bg-signal-soft")}>
                 <td className="px-3 py-3">
-                  <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggle(r.id)} aria-label={`Select ${r.title}`} className="accent-[#ff5b23]" />
+                  <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggle(r.id)} aria-label={`Select ${r.title}`} className="accent-signal" />
                 </td>
                 <td className="px-2 py-3">
                   <ScoreBadge score={r.score} size="sm" />
@@ -214,9 +214,9 @@ export function LibraryTable({ rows, total }: { rows: LibraryRow[]; total: numbe
                 <td className="px-2 py-3">
                   <StatusBadge status={r.status} />
                 </td>
-                <td className="px-2 py-3 text-xs text-muted">{r.category ? CATEGORY_LABEL[r.category] : "—"}</td>
+                <td className="px-2 py-3 text-xs text-muted">{r.category ? CATEGORY_LABEL[r.category] : "·"}</td>
                 <td className="px-2 py-3 text-xs text-muted">{PLATFORM_LABEL[r.source]}</td>
-                <td className="tc px-3 py-3 text-right text-xs text-muted">{r.posts || "—"}</td>
+                <td className="tc px-3 py-3 text-right text-xs text-muted">{r.posts || "·"}</td>
               </tr>
             ))}
             {rows.length === 0 && (

@@ -21,7 +21,8 @@ from starlette.staticfiles import StaticFiles
 from . import background
 from .config import REPO_DIR, settings
 from .http import AppJSONResponse, HttpError, error_body, json_response
-from .routes import account, billing, clips, pages, posts, videos
+from .portal import PORTAL_COOKIE, write_portal_cookie
+from .routes import account, billing, clips, pages, portal, posts, profile, two_factor, videos
 from .scheduler import start_scheduler, stop_scheduler
 
 logging.basicConfig(level=logging.INFO, format="[%(name)s] %(levelname)s %(message)s")
@@ -49,15 +50,52 @@ app = FastAPI(
 )
 
 
-# The marketing site lives on its own origin and only needs the public lead-capture endpoint.
+# The marketing site lives on its own origin and only needs the public lead and contact endpoints.
 class LeadsOnlyCORS(CORSMiddleware):
     async def __call__(self, scope, receive, send):
-        if scope["type"] == "http" and scope["path"] == "/api/leads":
+        if scope["type"] == "http" and scope["path"] in ("/api/leads", "/api/contact"):
             return await super().__call__(scope, receive, send)
         return await self.app(scope, receive, send)
 
 
 app.add_middleware(LeadsOnlyCORS, allow_origins=[settings.landing_url], allow_methods=["POST"], allow_headers=["content-type"], max_age=86400)
+
+_UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
+_PUBLIC_POSTS = {"/api/leads", "/api/contact"}  # called by the landing site (CORS above)
+_NO_ORIGIN_CHECK = {"/api/stripe/webhook"}  # server-to-server, signed by Stripe
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    """OWASP ASVS V14 / V50: refuse cross-site writes, and send the standard browser protections.
+
+    Cookies are already SameSite; the Origin check is a second, independent guard against CSRF.
+    """
+    path = request.url.path
+    if request.method in _UNSAFE and path.startswith("/api/") and path not in _NO_ORIGIN_CHECK:
+        origin = request.headers.get("origin")
+        allowed = {settings.app_url, settings.admin_url} | ({settings.landing_url} if path in _PUBLIC_POSTS else set())
+        cross_site = request.headers.get("sec-fetch-site") == "cross-site" and path not in _PUBLIC_POSTS
+        if (origin and origin.rstrip("/") not in allowed) or cross_site:
+            return json_response({"error": "This request came from another site and was refused."}, 403)
+    res = await call_next(request)
+    portal_cookie = getattr(request.state, "portal_cookie", None)
+    set_by_route = any(v.startswith(f"{PORTAL_COOKIE}=") for v in res.headers.getlist("set-cookie"))
+    if portal_cookie and not set_by_route:
+        write_portal_cookie(res, *portal_cookie)  # admin was active: push the idle timeout forward
+    h = res.headers
+    h.setdefault("X-Content-Type-Options", "nosniff")
+    h.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    h.setdefault("X-Frame-Options", "DENY")
+    h.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(self)")
+    h.setdefault("Cross-Origin-Opener-Policy", "same-origin-allow-popups")
+    if settings.is_prod:
+        h.setdefault("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+    if path.startswith("/api/"):
+        # API answers hold account data: never cache them, never render them as a page.
+        h.setdefault("Cache-Control", "no-store")
+        h.setdefault("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
+    return res
 
 
 @app.exception_handler(HttpError)
@@ -89,7 +127,7 @@ def health():
     return {"ok": True}
 
 
-for module in (account, billing, videos, clips, posts):
+for module in (account, profile, two_factor, billing, videos, clips, posts, portal):
     app.include_router(module.router)
 app.include_router(pages.router)
 

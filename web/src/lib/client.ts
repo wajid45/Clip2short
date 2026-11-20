@@ -1,3 +1,15 @@
+/** An API error with the server's message, HTTP status and machine-readable code (when the server sends one). */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public code?: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 /** Browser-side JSON fetch that surfaces the server's error message. */
 export async function apiFetch<T = unknown>(url: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
   const { json, headers, ...rest } = init;
@@ -13,8 +25,8 @@ export async function apiFetch<T = unknown>(url: string, init: RequestInit & { j
     // empty body
   }
   if (!res.ok) {
-    const msg = (data as { error?: string } | null)?.error ?? `Request failed (${res.status})`;
-    throw new Error(msg);
+    const body = data as { error?: string; code?: string } | null;
+    throw new ApiError(body?.error ?? `Request failed (${res.status})`, res.status, body?.code);
   }
   return data as T;
 }

@@ -29,7 +29,7 @@ export function parseTimecode(input: string): number | null {
 }
 
 export function formatDuration(sec: number | null | undefined): string {
-  if (sec == null || !Number.isFinite(sec)) return "—";
+  if (sec == null || !Number.isFinite(sec)) return "·";
   const r = Math.round(sec);
   if (r < 60) return `${r}s`;
   const h = Math.floor(r / 3600);

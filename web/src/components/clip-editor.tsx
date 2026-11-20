@@ -84,7 +84,7 @@ function ScoreBar({ label, value }: { label: string; value: number | null }) {
     <div>
       <div className="flex justify-between text-xs">
         <span className="text-muted">{label}</span>
-        <span className="tc text-text">{value ?? "—"}</span>
+        <span className="tc text-text">{value ?? "·"}</span>
       </div>
       <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface-3">
         <div className="h-full rounded-full bg-signal" style={{ width: `${value ?? 0}%` }} />

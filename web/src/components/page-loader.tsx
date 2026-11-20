@@ -18,7 +18,7 @@ export function PageLoader({ label = "Loading", offsetSidebar = false }: { label
               cy="32"
               r="28"
               fill="none"
-              stroke="#ff5b23"
+              stroke="var(--color-signal)"
               strokeWidth="3"
               strokeLinecap="round"
               strokeDasharray="44 132"

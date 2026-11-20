@@ -12,4 +12,6 @@ export default defineConfig({
   server: { port: 3001, strictPort: true, proxy: { "/api": { target: API, xfwd: true } } },
   preview: { port: 3001 },
   ssr: { noExternal: ["@shortlark/shared"] },
+  // three.js (the hero scene) is its own lazy chunk, fetched after first paint; it is expected to be ~530 kB raw.
+  build: { chunkSizeWarningLimit: 600 },
 });

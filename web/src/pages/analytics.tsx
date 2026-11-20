@@ -15,7 +15,7 @@ const RANGES = [
 ];
 
 const nf = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
-const fmt = (n: number | null | undefined) => (n == null ? "—" : nf.format(n));
+const fmt = (n: number | null | undefined) => (n == null ? "·" : nf.format(n));
 
 export function AnalyticsPage() {
   const range = useSearchParams().get("range");
@@ -58,7 +58,7 @@ export function AnalyticsPage() {
               <Stat label="Likes" value={fmt(d.totals.likes)} />
               <Stat label="Comments" value={fmt(d.totals.comments)} />
               <Stat label="Shares" value={fmt(d.totals.shares)} />
-              <Stat label="Engagement rate" value={d.engagement == null ? "—" : `${d.engagement.toFixed(1)}%`} hint="(likes + comments + shares) ÷ views" />
+              <Stat label="Engagement rate" value={d.engagement == null ? "·" : `${d.engagement.toFixed(1)}%`} hint="(likes + comments + shares) ÷ views" />
             </div>
 
             {(d.failedCount > 0 || d.scheduledCount > 0) && (

@@ -23,7 +23,7 @@ export function MiniTimeline({ clips, duration }: { clips: TimelineClip[]; durat
           <Link
             key={c.id}
             href={`/app/clips/${c.id}`}
-            title={`${c.title} · ${formatTimecode(c.startSec)}–${formatTimecode(c.endSec)}${c.score != null ? ` · score ${c.score}` : ""}`}
+            title={`${c.title} · ${formatTimecode(c.startSec)} to ${formatTimecode(c.endSec)}${c.score != null ? ` · score ${c.score}` : ""}`}
             className={clsx(
               "absolute top-1.5 bottom-1.5 min-w-[3px] rounded-sm opacity-80 transition-opacity hover:opacity-100",
               STATUS_META[c.status]?.bar ?? "bg-idea",

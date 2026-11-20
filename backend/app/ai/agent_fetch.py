@@ -1,21 +1,20 @@
 """Agent browser-fetch fallback.
 
-When our servers are blocked (YouTube bot checks, rate limits), Claude's server-side
-web_fetch tool retrieves the caption sources from Anthropic's infrastructure instead.
-It may only fetch the URLs we list, on the video's own domains.
+When our servers are blocked (YouTube bot checks, rate limits), Gemini's URL context tool
+retrieves the caption sources from Google's infrastructure instead. It is only given the
+URLs we list, on the video's own domains.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Literal
 from urllib.parse import urlsplit
 
 from pydantic import BaseModel, Field
 
 from ..captions.parse import Segment, estimate_timing, normalize, parse_vtt_or_srt
-from ..config import settings
-from .client import FALLBACK_BETA, client
+from .client import generate_with_urls
 
 
 class TimedLine(BaseModel):
@@ -59,55 +58,25 @@ Rules:
 - If you only find timestamped lines, use "timed_lines". If only untimed text, use "plain_text".
 - If none of the URLs contain captions, return found=false and format "none"."""
 
-    messages: list[dict[str, Any]] = [{"role": "user", "content": prompt}]
-    tools = [
-        {
-            "type": "web_fetch_20260209",
-            "name": "web_fetch",
-            "max_uses": 6,
-            "allowed_domains": allowed_domains,
-            "max_content_tokens": 120000,
-        }
-    ]
-
-    # Server tools can pause long turns; continue up to a few times.
-    for _ in range(4):
-        with client().beta.messages.stream(
-            model=settings.anthropic_model,
-            max_tokens=64000,
-            betas=[FALLBACK_BETA],
-            fallbacks="default",
-            thinking={"type": "adaptive"},
-            output_config={"effort": "low"},
-            output_format=AgentResult,
-            tools=tools,  # type: ignore[arg-type]
-            messages=messages,  # type: ignore[arg-type]
-        ) as stream:
-            message = stream.get_final_message()
-        if message.stop_reason == "pause_turn":
-            messages.append({"role": "assistant", "content": message.content})
-            continue
-        if message.stop_reason in ("refusal", "max_tokens"):
-            return None
-        r = message.parsed_output
-        if not r or not r.found:
-            return None
-        if r.format == "vtt" and "-->" in r.vtt:
-            segs = parse_vtt_or_srt(r.vtt)
-            if segs:
-                return AgentFetchResult(segs, "exact", _note(r.source_url, "timed captions"))
-        if len(r.timed_lines) >= 3:
-            lines = sorted(r.timed_lines, key=lambda line: line.start)
-            segs = normalize(
-                [{"start": ln.start, "end": lines[i + 1].start if i + 1 < len(lines) else ln.start + 5, "text": ln.text} for i, ln in enumerate(lines)]
-            )
-            if segs:
-                return AgentFetchResult(segs, "exact", _note(r.source_url, "timestamped lines"))
-        if len(r.plain_text.split()) > 40:
-            return AgentFetchResult(
-                estimate_timing(r.plain_text, duration_sec),
-                "estimated",
-                f"{_note(r.source_url, 'untimed text')} Placement is estimated from word count, so check in/out points in the editor.",
-            )
+    prompt += f"\n- Only open pages on these domains: {', '.join(allowed_domains)}."
+    r = generate_with_urls(AgentResult, prompt=prompt, thinking="low")
+    if not r or not r.found:
         return None
+    if r.format == "vtt" and "-->" in r.vtt:
+        segs = parse_vtt_or_srt(r.vtt)
+        if segs:
+            return AgentFetchResult(segs, "exact", _note(r.source_url, "timed captions"))
+    if len(r.timed_lines) >= 3:
+        lines = sorted(r.timed_lines, key=lambda line: line.start)
+        segs = normalize(
+            [{"start": ln.start, "end": lines[i + 1].start if i + 1 < len(lines) else ln.start + 5, "text": ln.text} for i, ln in enumerate(lines)]
+        )
+        if segs:
+            return AgentFetchResult(segs, "exact", _note(r.source_url, "timestamped lines"))
+    if len(r.plain_text.split()) > 40:
+        return AgentFetchResult(
+            estimate_timing(r.plain_text, duration_sec),
+            "estimated",
+            f"{_note(r.source_url, 'untimed text')} Placement is estimated from word count, so check in/out points in the editor.",
+        )
     return None

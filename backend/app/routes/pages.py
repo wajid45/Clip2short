@@ -17,12 +17,14 @@ from ..clips import clip_order, clip_where, filters_from_params
 from ..config import billing_configured, dev_billing_bypass, settings
 from ..credits import by_source, credit_summary, ensure_trial
 from ..db import get_db, utcnow
+from ..email import email_configured
 from ..http import json_response
 from ..integrations import INTEGRATIONS, cred, integration_for, is_configured, load_integrations
-from ..models import Clip, CreditTransaction, IntegrationSetting, Lead, Post, SocialAccount, User, Video
+from ..models import Clip, ContactMessage, CreditTransaction, IntegrationSetting, Lead, Post, SocialAccount, User, Video
 from ..plans import analysis_cost, get_plan, has_active_subscription, limits_for
 from ..social.providers import PROVIDERS
 from ..video.pipeline import get_segments
+from .two_factor import status as two_factor_status
 
 router = APIRouter(prefix="/api/page")
 NO_STORE = {"Cache-Control": "no-store"}
@@ -69,6 +71,7 @@ def videos(user: User = Depends(require_subscriber), s: Session = Depends(get_db
                 "title": v.title,
                 "author": v.author,
                 "platform": v.platform,
+                "category": v.category,
                 "durationSec": v.durationSec,
                 "thumbnailUrl": v.thumbnailUrl,
                 "createdAt": v.createdAt,
@@ -171,7 +174,10 @@ def moments(request: Request, user: User = Depends(require_subscriber), s: Sessi
     min_score = num("min", 0)
     page_no = max(1, num("page", 1))
     unposted = q.get("unposted") == "1"
+    label = (q.get("label") or "").strip()[:40]
     where = [Clip.userId == user.id, Clip.score.is_not(None)]
+    if label:
+        where.append(Clip.momentLabel == label)
     if min_score:
         where.append(Clip.score >= min_score)
     if unposted:
@@ -181,7 +187,17 @@ def moments(request: Request, user: User = Depends(require_subscriber), s: Sessi
     ).all()
     total = s.scalar(select(func.count()).select_from(Clip).where(*where)) or 0
     clips = [{**c.to_dict(), "video": {"id": c.video.id, "title": c.video.title, "thumbnailUrl": c.video.thumbnailUrl}} for c in rows]
-    return page({"clips": clips, "total": total, "page": page_no, "min": min_score, "unposted": unposted, "pageSize": MOMENTS_PAGE})
+    labels = [
+        r[0]
+        for r in s.execute(
+            select(Clip.momentLabel, func.count())
+            .where(Clip.userId == user.id, Clip.score.is_not(None), Clip.momentLabel.is_not(None))
+            .group_by(Clip.momentLabel)
+            .order_by(func.count().desc())
+            .limit(12)
+        ).all()
+    ]
+    return page({"clips": clips, "total": total, "page": page_no, "min": min_score, "unposted": unposted, "pageSize": MOMENTS_PAGE, "label": label, "labels": labels})
 
 
 @router.get("/library")
@@ -426,3 +442,33 @@ def integrations(_: User = Depends(require_admin), s: Session = Depends(get_db))
             }
         )
     return page({"integrations": out})
+
+
+@router.get("/settings")
+def account_settings(user: User = Depends(require_user), s: Session = Depends(get_db)):
+    plan = get_plan(user.plan) if has_active_subscription(user) else None
+    return page(
+        {
+            "name": user.name or "",
+            "email": user.email,
+            "createdAt": user.createdAt,
+            "planName": plan["name"] if plan else None,
+            "hasSubscription": bool(user.stripeSubscriptionId),
+            "videos": s.scalar(select(func.count()).select_from(Video).where(Video.userId == user.id)) or 0,
+            "clips": s.scalar(select(func.count()).select_from(Clip).where(Clip.userId == user.id)) or 0,
+            "accounts": s.scalar(select(func.count()).select_from(SocialAccount).where(SocialAccount.userId == user.id)) or 0,
+            "twoFactor": two_factor_status(s, user.id),
+        }
+    )
+
+
+@router.get("/admin/messages")
+def messages(_: User = Depends(require_admin), s: Session = Depends(get_db)):
+    rows = s.scalars(select(ContactMessage).order_by(ContactMessage.handled.asc(), ContactMessage.createdAt.desc()).limit(500)).all()
+    return page(
+        {
+            "messages": [m.to_dict(exclude=("userAgent",)) for m in rows],
+            "open": s.scalar(select(func.count()).select_from(ContactMessage).where(ContactMessage.handled.is_(False))) or 0,
+            "emailConfigured": email_configured(),
+        }
+    )

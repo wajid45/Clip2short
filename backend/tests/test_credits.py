@@ -6,6 +6,7 @@ import pytest
 from app.credits import InsufficientCredits, by_source, credit_summary, ensure_trial, grant_credits, refund_credits, spend_credits
 from app.db import SessionLocal, utcnow
 from app.models import CreditGrant, User
+from app.plans import TRIAL
 from app.security import hash_password
 
 
@@ -20,7 +21,7 @@ def test_trial_is_granted_once(db):
     u = make_user(db, "trial@test.dev")
     ensure_trial(db, u.id)
     ensure_trial(db, u.id)
-    assert credit_summary(db, u.id).total == 60
+    assert credit_summary(db, u.id).total == TRIAL["credits"]
 
 
 def test_spend_draws_soonest_expiring_first_and_refund_restores(db):

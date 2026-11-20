@@ -27,7 +27,7 @@ export function scoreTone(score: number | null | undefined) {
 export function ScoreBadge({ score, size = "md" }: { score: number | null | undefined; size?: "sm" | "md" | "lg" }) {
   return (
     <span
-      title="Virality score (0–100)"
+      title="Virality score (0 to 100)"
       className={clsx(
         "tc inline-flex items-center justify-center rounded-md border font-semibold",
         size === "sm" && "h-6 min-w-8 px-1.5 text-xs",
@@ -36,7 +36,7 @@ export function ScoreBadge({ score, size = "md" }: { score: number | null | unde
         scoreTone(score),
       )}
     >
-      {score ?? "—"}
+      {score ?? "·"}
     </span>
   );
 }

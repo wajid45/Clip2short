@@ -213,7 +213,7 @@ def suggest(clip_id: str, request: Request, user: User = Depends(require_subscri
     """AI posting copy for a clip (1 credit, refunded if it fails). Nothing is applied until the user approves."""
     clip = _own_clip(s, user, clip_id)
     if not ai_configured():
-        raise HttpError(503, "AI suggestions aren't configured on this server (missing ANTHROPIC_API_KEY).")
+        raise HttpError(503, "AI suggestions aren't configured on this server (missing GEMINI_API_KEY).")
     rate_limit(request, f"suggest:{user.id}", 30, 60 * 60)
     try:
         spend_id = spend_credits(s, user.id, SUGGEST_COST, f"AI posting copy for “{clip.title[:80]}”", clip.videoId)

@@ -31,6 +31,7 @@ class Settings:
     app_url: str = _url("APP_URL", "http://localhost:3000")
     """Public URL of the web app (OAuth redirects, Stripe return URLs). The API is served from the same origin."""
     landing_url: str = _url("LANDING_URL", "http://localhost:3001")
+    admin_url: str = _url("ADMIN_URL", "http://localhost:3002")
     """Public URL of the marketing site; allowed to call the public lead API (CORS)."""
     port: int = int(_opt("PORT") or 4000)
     trust_proxy: bool = _opt("TRUST_PROXY") == "true"
@@ -42,9 +43,21 @@ class Settings:
     encryption_key: str | None = _opt("ENCRYPTION_KEY")
     cron_secret: str | None = _opt("CRON_SECRET")
     admin_emails: tuple[str, ...] = tuple(s.strip().lower() for s in (_opt("ADMIN_EMAILS") or "").split(",") if s.strip())
+    # Admin portal: when set, only these client IPs may call /api/portal/* (comma-separated).
+    # Refuse new passwords found in known data breaches (Have I Been Pwned range API). On unless "false".
+    password_breach_check: bool = _opt("PASSWORD_BREACH_CHECK") != "false"
+    admin_allowed_ips: tuple[str, ...] = tuple(s.strip() for s in (_opt("ADMIN_ALLOWED_IPS") or "").split(",") if s.strip())
 
-    anthropic_key: str | None = _opt("ANTHROPIC_API_KEY")
-    anthropic_model: str = _opt("ANTHROPIC_MODEL") or "claude-opus-5-5"
+    gemini_key: str | None = _opt("GEMINI_API_KEY") or _opt("GOOGLE_API_KEY")
+    gemini_model: str = _opt("GEMINI_MODEL") or "gemini-3.8-flash"
+    """Google AI Studio model id; see https://ai.google.dev/gemini-api/docs/models"""
+    # One model per video category (app/ai/engines.py); any left empty falls back to GEMINI_MODEL.
+    gemini_category_models: dict[str, str] = field(
+        default_factory=lambda: {c: m for c in ("podcast", "gaming", "movies", "sports", "other") if (m := _opt(f"GEMINI_MODEL_{c.upper()}"))}
+    )
+
+    resend_key: str | None = _opt("RESEND_API_KEY")
+    email_from: str = _opt("EMAIL_FROM") or "Shortlark <no-reply@shortlark.com>"
 
     stripe_secret: str | None = _opt("STRIPE_SECRET_KEY")
     stripe_webhook_secret: str | None = _opt("STRIPE_WEBHOOK_SECRET")

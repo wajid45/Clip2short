@@ -14,7 +14,7 @@ export interface CaptionInfo {
 }
 
 function sourceLabel(source: string | null): string {
-  if (!source) return "—";
+  if (!source) return "·";
   const [kind, a, b] = source.split(":");
   if (kind === "youtube") {
     if (a === "manual") return `YouTube · creator captions (${b})`;

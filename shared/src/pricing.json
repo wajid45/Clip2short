@@ -1,6 +1,6 @@
 {
   "trial": {
-    "credits": 60,
+    "credits": 6,
     "days": 14
   },
   "baseLimits": {
@@ -12,8 +12,8 @@
     {
       "id": "creator",
       "name": "Creator",
-      "price": 19,
-      "monthlyCredits": 300,
+      "price": 24,
+      "monthlyCredits": 250,
       "tagline": "For a weekly stream or podcast.",
       "limits": {
         "maxVideoMinutes": 180,
@@ -21,7 +21,7 @@
         "scheduledPosts": 30
       },
       "features": [
-        "300 credits every month (5 hours of video)",
+        "250 credits every month (4 hours of video)",
         "Videos up to 3 hours",
         "3 connected social accounts",
         "30 posts in the queue"
@@ -30,8 +30,8 @@
     {
       "id": "pro",
       "name": "Pro",
-      "price": 49,
-      "monthlyCredits": 1000,
+      "price": 54,
+      "monthlyCredits": 500,
       "tagline": "For daily streamers and busy clippers.",
       "highlight": true,
       "limits": {
@@ -40,7 +40,7 @@
         "scheduledPosts": 300
       },
       "features": [
-        "1,000 credits every month (16+ hours)",
+        "500 credits every month (8 hours)",
         "Videos up to 6 hours",
         "10 connected social accounts",
         "300 posts in the queue"
@@ -50,7 +50,7 @@
       "id": "studio",
       "name": "Studio",
       "price": 129,
-      "monthlyCredits": 3000,
+      "monthlyCredits": 1550,
       "tagline": "For agencies running many channels.",
       "limits": {
         "maxVideoMinutes": 600,
@@ -58,7 +58,7 @@
         "scheduledPosts": 2000
       },
       "features": [
-        "3,000 credits every month (50 hours)",
+        "1,550 credits every month (25 hours)",
         "Videos up to 10 hours",
         "40 connected social accounts",
         "2,000 posts in the queue"

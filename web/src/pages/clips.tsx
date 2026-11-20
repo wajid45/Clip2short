@@ -38,10 +38,10 @@ export function MomentsPage() {
   const search = useSearchParams().toString();
   return (
     <PageData<MomentsData> path={`/moments${search ? `?${search}` : ""}`} title="Best moments">
-      {({ clips, total, page, min, unposted, pageSize }) => {
+      {({ clips, total, page, min, unposted, pageSize, label, labels }) => {
         const qs = (o: Record<string, string | number | undefined>) => {
           const p = new URLSearchParams();
-          const merged = { min: min || undefined, unposted: unposted ? "1" : undefined, ...o };
+          const merged = { min: min || undefined, unposted: unposted ? "1" : undefined, label: label || undefined, ...o };
           for (const [k, v] of Object.entries(merged)) if (v !== undefined && v !== "" && v !== 0) p.set(k, String(v));
           const s = p.toString();
           return s ? `?${s}` : "";
@@ -75,6 +75,24 @@ export function MomentsPage() {
               </Link>
               <span className="tc ml-auto text-sm text-faint">{total} moments</span>
             </div>
+            {labels.length > 0 && (
+              <div className="-mt-3 mb-6 flex flex-wrap items-center gap-2" aria-label="Filter by moment type">
+                <span className="mr-1 text-sm text-faint">Moment type</span>
+                {[{ key: "", text: "All" }, ...labels.map((l) => ({ key: l, text: l }))].map((l) => (
+                  <Link
+                    key={l.key || "all"}
+                    href={`/app/moments${qs({ label: l.key || undefined, page: undefined })}`}
+                    scroll={false}
+                    className={clsx(
+                      "rounded-full border px-3 py-1 text-[13px]",
+                      (label || "") === l.key ? "border-signal bg-signal text-on-signal" : "border-line text-muted hover:text-text",
+                    )}
+                  >
+                    {l.text}
+                  </Link>
+                ))}
+              </div>
+            )}
 
             {clips.length === 0 ? (
               <EmptyState

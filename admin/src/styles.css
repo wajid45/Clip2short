@@ -1,0 +1,18 @@
+@import "../../shared/src/styles.css";
+
+/* Tailwind only scans this package by default; include the shared brand components. */
+@source "../../shared/src";
+
+/*
+ * The admin portal is a data console: body text and tables use a clean sans for density and
+ * legibility; page titles keep the brand serif (font-display).
+ */
+@theme {
+  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.login-glow {
+  background:
+    radial-gradient(50% 40% at 50% 0%, color-mix(in srgb, var(--color-signal) 22%, transparent), transparent 70%),
+    radial-gradient(40% 30% at 85% 100%, rgb(132 73 199 / 0.16), transparent 70%);
+}

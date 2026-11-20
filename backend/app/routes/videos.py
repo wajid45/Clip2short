@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from ..ai.client import ai_configured
 from ..ai.clipper import FOCUSES
+from ..ai.engines import CATEGORY_IDS
 from ..auth import require_subscriber, require_user
 from ..background import after
 from ..captions.parse import parse_pasted_transcript
@@ -34,11 +35,38 @@ class ImportBody(Model):
     # Duration measured by the browser for direct files (servers can't read it without downloading).
     clientDuration: float | None = Field(default=None, gt=0, le=24 * 3600)
     focus: Literal["auto", "events", "funny", "insights"] | None = None
+    # Required for new imports: picks the AI engine. Older clients without it get a clear error.
+    category: Literal["podcast", "gaming", "movies", "sports", "other"] | None = None
+
+
+class PreviewBody(Model):
+    url: text(1, min_msg="Paste a video link")  # type: ignore[valid-type]
+
+
+@router.post("/videos/preview")
+def preview_video(request: Request, body: JsonBody, user: User = Depends(require_user)):
+    """Title and author of a link before importing, so the app can suggest a category."""
+    b = validate(PreviewBody, body)
+    rate_limit(request, f"preview:{user.id}", 120, 60 * 60)
+    try:
+        parsed = parse_video_url(b.url)
+    except SourceError as e:
+        raise HttpError(400, str(e)) from None
+    if parsed.platform == "direct":
+        name = parsed.canonicalUrl.rsplit("/", 1)[-1].split("?", 1)[0]
+        return json_response({"title": name, "author": None, "description": ""})
+    try:
+        meta = resolve_metadata(parsed, None)
+    except ValueError as e:
+        raise HttpError(400, str(e)) from None
+    return json_response({"title": meta.title, "author": meta.author, "description": meta.description[:600]})
 
 
 @router.post("/videos")
 def import_video(request: Request, body: JsonBody, user: User = Depends(require_subscriber), s: Session = Depends(get_db)):
     b = validate(ImportBody, body)
+    if not b.category:
+        raise HttpError(400, "category: Choose what kind of video this is, so the right AI engine finds its highlights.")
     try:
         parsed = parse_video_url(b.url)
     except SourceError as e:
@@ -87,6 +115,7 @@ def import_video(request: Request, body: JsonBody, user: User = Depends(require_
         captionNote="Fetching captions…",
         analysisStatus="idle",
         analysisFocus=b.focus or "auto",
+        category=b.category,
     )
     s.add(video)
     s.commit()
@@ -148,6 +177,9 @@ def delete_video(video_id: str, user: User = Depends(require_user), s: Session =
 def analyze(video_id: str, body: JsonBody = None, user: User = Depends(require_subscriber), s: Session = Depends(get_db)):
     focus = body.get("focus") if isinstance(body, dict) and body.get("focus") in FOCUSES else "auto"
     video = _own_video(s, user, video_id)
+    # Re-running can switch the category (and so the AI engine).
+    if isinstance(body, dict) and body.get("category") in CATEGORY_IDS:
+        video.category = body["category"]
     if not ai_configured():
         raise HttpError(503, "AI analysis isn't configured on this server.")
     if video.captionStatus != "ready":

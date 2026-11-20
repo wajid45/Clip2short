@@ -1,0 +1,687 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   Studio landing: editorial serif type, mono readouts, scroll-driven motion.
+   Imported from styles.css (after the Tailwind tokens, so var(--color-*) resolve).
+   ════════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* The landing is set 10% smaller than the browser default, so each section fits a laptop
+     screen. Tailwind spacing and text sizes are rem-based and follow this. */
+  font-size: 90%;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-io: cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+/* Short laptop screens (1366×768, 1280×720): a little smaller again so sections still fit. */
+@media (min-width: 1024px) and (max-height: 820px) {
+  :root {
+    font-size: 82%;
+  }
+}
+
+/* Readouts: small mono caps, like a recorder's display. */
+.hud {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.5;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Display headlines: big, tight serif. */
+.display {
+  font-weight: 400;
+  line-height: 0.92;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+/* Underlined caps link with a turquoise rule that redraws on hover. */
+.ulink {
+  position: relative;
+  gap: 0.5em;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  padding-bottom: 4px;
+}
+.ulink::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--color-signal);
+}
+.ulink:hover::after {
+  animation: ulink-redraw 0.7s var(--ease-io);
+}
+.ulink.is-active::after {
+  background: var(--color-signal);
+}
+@keyframes ulink-redraw {
+  0% {
+    transform: scaleX(1);
+    transform-origin: right;
+  }
+  45% {
+    transform: scaleX(0);
+    transform-origin: right;
+  }
+  46% {
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+  100% {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+}
+
+/* ── Letter-by-letter rise (motion/split.tsx) ─────────────────────────────── */
+.split-w {
+  display: inline-block;
+  overflow: hidden;
+  /* Room for descenders and italic overhang inside the mask. */
+  padding: 0.04em 0.08em 0.24em;
+  margin: -0.04em -0.08em -0.24em;
+  vertical-align: top;
+}
+.split-l {
+  display: inline-block;
+}
+.js .split .split-l {
+  transform: translate3d(0, 115%, 0) rotate(8deg);
+  transform-origin: 0 100%;
+}
+.js .split.is-in .split-l {
+  transform: none;
+  transition: transform 1s var(--ease-out);
+  transition-delay: calc(var(--d, 0ms) + var(--i) * var(--s, 18ms));
+}
+/* Wait for the opening curtain on the first visit. */
+.js:not(.intro-seen) .hero-title {
+  --d: 1250ms !important;
+}
+
+/* ── Opening curtain (site/intro.tsx) ─────────────────────────────────────── */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  animation: intro-gone 0s linear 2.6s forwards;
+}
+.intro-panel {
+  position: absolute;
+  inset: -2px 0 0;
+  border-bottom-left-radius: 50% 14vh;
+  border-bottom-right-radius: 50% 14vh;
+  animation: intro-up 1.05s var(--ease-io) forwards;
+  animation-delay: calc(560ms + var(--i) * 95ms);
+}
+.intro-sheet {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+  animation-delay: 520ms;
+}
+.intro-mark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: intro-mark 0.6s var(--ease-out) both;
+}
+@keyframes intro-up {
+  to {
+    transform: translate3d(0, -115%, 0);
+  }
+}
+@keyframes intro-mark {
+  from {
+    opacity: 0;
+    transform: scale(0.85) rotate(-8deg);
+  }
+}
+@keyframes intro-gone {
+  to {
+    visibility: hidden;
+  }
+}
+.intro-seen .intro,
+html:not(.js) .intro {
+  display: none;
+}
+
+/* ── Paper grain over everything (very faint) ─────────────────────────────── */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply;
+}
+:root[data-theme="dark"] .grain {
+  mix-blend-mode: screen;
+  opacity: 0.035;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .grain {
+    mix-blend-mode: screen;
+    opacity: 0.035;
+  }
+}
+
+/* ── Header and full-screen menu ──────────────────────────────────────────── */
+.site-header.is-bar {
+  background: color-mix(in srgb, var(--color-bg) 78%, transparent);
+  backdrop-filter: blur(14px) saturate(1.3);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-line) 70%, transparent);
+}
+/* Scrolling down: no bar, so the page shows through the middle; the logo and the buttons sit on
+   small frosted pills of their own. */
+.hdr-pill {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    padding 0.3s var(--ease-io),
+    backdrop-filter 0.3s ease;
+}
+.site-header.is-compact .hdr-pill {
+  padding: 5px 6px 5px 10px;
+  background: color-mix(in srgb, var(--color-bg) 62%, transparent);
+  border-color: color-mix(in srgb, var(--color-line) 70%, transparent);
+  backdrop-filter: blur(12px) saturate(1.3);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+}
+.site-header.is-compact a.hdr-pill {
+  padding: 6px 14px 6px 8px;
+}
+.menu-lines {
+  position: relative;
+  display: block;
+  width: 18px;
+  height: 10px;
+}
+.menu-lines i {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 1.75px;
+  border-radius: 2px;
+  background: currentColor;
+  transition:
+    top 0.3s var(--ease-io),
+    transform 0.3s var(--ease-io),
+    width 0.3s var(--ease-io);
+}
+.menu-lines i:nth-child(1) {
+  top: 0;
+}
+.menu-lines i:nth-child(2) {
+  top: calc(100% - 1.75px);
+  width: 62%;
+}
+.menu-btn:hover .menu-lines i:nth-child(2) {
+  width: 100%;
+}
+.menu-btn.is-open {
+  background: var(--color-text);
+  color: var(--color-bg);
+  border-color: var(--color-text);
+}
+.menu-btn.is-open .menu-lines i {
+  top: calc(50% - 0.875px);
+  width: 100%;
+}
+.menu-btn.is-open .menu-lines i:nth-child(1) {
+  transform: rotate(45deg);
+}
+.menu-btn.is-open .menu-lines i:nth-child(2) {
+  transform: rotate(-45deg);
+}
+
+.site-menu {
+  visibility: hidden;
+  transition: visibility 0s linear 0.8s;
+}
+.site-menu.is-open {
+  visibility: visible;
+  transition: none;
+}
+.site-menu-sheet {
+  transform: translate3d(0, -105%, 0);
+  border-bottom-left-radius: 50% 10vh;
+  border-bottom-right-radius: 50% 10vh;
+  transition:
+    transform 0.8s var(--ease-io),
+    border-radius 0.8s var(--ease-io);
+}
+.site-menu.is-open .site-menu-sheet {
+  transform: none;
+  border-radius: 0;
+}
+.menu-item > a {
+  transform: translate3d(0, 110%, 0);
+  transition: transform 0.7s var(--ease-out);
+}
+.site-menu.is-open .menu-item > a {
+  transform: none;
+  transition-delay: calc(0.25s + var(--i) * 45ms);
+}
+
+/* ── Hero ─────────────────────────────────────────────────────────────────── */
+.wave-canvas {
+  opacity: 0;
+  transition: opacity 1.4s ease;
+}
+.wave-canvas.is-ready {
+  opacity: 1;
+}
+.hero-veil {
+  background:
+    radial-gradient(60% 40% at 50% 46%, color-mix(in srgb, var(--color-bg) 70%, transparent) 0%, transparent 75%),
+    linear-gradient(180deg, var(--color-bg) 0%, transparent 22%);
+}
+.rec-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #ff3b3b;
+  animation: rec 1.6s ease-out infinite;
+}
+@keyframes rec {
+  0% {
+    box-shadow: 0 0 0 0 rgb(255 59 59 / 0.6);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 8px rgb(255 59 59 / 0);
+  }
+}
+/* The rotating verb (home/hero.tsx): the slot eases to each word's width; the word rises in. */
+.cycle-word {
+  position: relative;
+  display: inline-block;
+  height: 1.3em;
+  overflow: hidden;
+  vertical-align: bottom;
+  text-align: left;
+  white-space: nowrap;
+  transition: width 0.5s var(--ease-io);
+}
+.cycle-word-in {
+  display: inline-block;
+  line-height: 1.3em;
+  animation: cycle-in 0.55s var(--ease-out) both;
+}
+@keyframes cycle-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.9em, 0);
+  }
+}
+.cycle-word-measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.cycle-word-measure > span {
+  position: absolute;
+  white-space: nowrap;
+}
+
+/* (old) The cycling verb: a slot-machine column that holds on each word. */
+.verb-slot {
+  display: inline-block;
+  height: 1.3em;
+  overflow: hidden;
+  vertical-align: bottom;
+  text-align: left;
+}
+.verb-track {
+  display: block;
+  line-height: 1.3em;
+  animation: verbs 12.5s var(--ease-io) infinite;
+}
+@keyframes verbs {
+  0%,
+  16% {
+    transform: translateY(0);
+  }
+  20%,
+  36% {
+    transform: translateY(-1.3em);
+  }
+  40%,
+  56% {
+    transform: translateY(-2.6em);
+  }
+  60%,
+  76% {
+    transform: translateY(-3.9em);
+  }
+  80%,
+  96% {
+    transform: translateY(-5.2em);
+  }
+  100% {
+    transform: translateY(-6.5em);
+  }
+}
+.js .hero-rise {
+  animation: rise-in 1s var(--ease-out) both 0.55s;
+}
+.js:not(.intro-seen) .hero-rise {
+  animation-delay: 1.75s;
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0);
+  }
+}
+.scroll-cue-line {
+  position: relative;
+  display: block;
+  width: 56px;
+  height: 1px;
+  overflow: hidden;
+  background: var(--color-line-strong);
+}
+.scroll-cue-line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--color-signal);
+  animation: cue 2.2s var(--ease-io) infinite;
+}
+@keyframes cue {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* ── Marquee strips ───────────────────────────────────────────────────────── */
+.marquee-mask {
+  mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+}
+.marquee-track {
+  animation: marquee-x 48s linear infinite;
+}
+@keyframes marquee-x {
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+.marquee-fast {
+  animation-duration: 32s;
+}
+.marquee-mask:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+/* ── Showcase card that opens to full width (home/showcase.tsx) ───────────── */
+.showcase {
+  --open: 0;
+}
+.showcase-card {
+  border-radius: 28px;
+}
+@media (min-width: 768px) {
+  .showcase-card {
+    width: calc(72vw + var(--open) * 28vw);
+    height: calc(60svh + var(--open) * 26svh); /* opens to 86% of the screen, not all of it */
+    border-radius: calc((1 - var(--open)) * 36px);
+  }
+  .showcase-card > .relative {
+    padding-top: calc(32px + var(--open) * 52px); /* clears the floating site header once open */
+  }
+  .showcase-scan {
+    transform: scale(calc(0.9 + var(--open) * 0.1));
+    transform-origin: 50% 50%;
+  }
+  .showcase-short {
+    transform: translate3d(calc((1 - var(--open)) * 120px), 0, 0) rotate(calc((1 - var(--open)) * 8deg));
+    opacity: calc(var(--open) * 1.4 - 0.2);
+  }
+}
+.showcase-grid {
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.05) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse at 50% 40%, black, transparent 75%);
+}
+
+/* ── 3D flight (home/flythrough.tsx) ──────────────────────────────────────── */
+.fly-stage {
+  perspective: 1100px;
+  perspective-origin: 50% 40%;
+  transform-style: preserve-3d;
+}
+.fly-card {
+  /* Centred with margin:auto (whole pixels, no translate) and no will-change: the browser
+     re-rasterises the card at its real size once it settles, so the text stays crisp. */
+  transform-origin: 50% 50%;
+}
+@media (min-width: 768px) {
+  .fly-list {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    padding: 0;
+  }
+}
+
+/* ── Waving tape (home/wave-band.tsx) ─────────────────────────────────────── */
+.wave-band {
+  height: clamp(135px, 21.6vw, 306px);
+  overflow: visible;
+}
+.wave-text {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 48px;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  fill: #14120a;
+}
+
+/* ── Use cases on the blue block ──────────────────────────────────────────── */
+.use-block {
+  background: #2f54c0;
+}
+
+/* ── FAQ plus sign ────────────────────────────────────────────────────────── */
+.faq-plus::before,
+.faq-plus::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1.5px;
+  background: currentColor;
+  transition: transform 0.4s var(--ease-io);
+}
+.faq-plus::after {
+  transform: rotate(90deg);
+}
+.faq-item[open] .faq-plus::after {
+  transform: rotate(0deg);
+}
+.faq-item[open] .faq-plus {
+  color: var(--color-signal);
+}
+
+/* ── Footer wordmark ──────────────────────────────────────────────────────── */
+.footer-mark {
+  margin: 3rem 0 -0.2em;
+  text-align: center;
+  font-size: clamp(72px, 17.5vw, 300px);
+  line-height: 0.8;
+  letter-spacing: -0.055em;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+/* ── Pricing: highlighted plan glow and the hours slider ──────────────────── */
+.plan-glow {
+  background: radial-gradient(60% 70% at 50% 0%, rgb(254 134 74 / 0.32), rgb(226 66 192 / 0.12) 45%, transparent 75%);
+}
+.range {
+  --fill: 50%;
+  height: 28px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+.range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--color-signal) var(--fill), var(--color-surface-3) var(--fill));
+}
+.range::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-surface-3);
+}
+.range::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-signal);
+}
+.range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 26px;
+  height: 26px;
+  margin-top: -10px;
+  border-radius: 999px;
+  background: #fff;
+  border: 2px solid var(--color-signal);
+  box-shadow: 0 6px 18px -6px rgb(217 72 15 / 0.6);
+  transition: transform 0.2s var(--ease-out);
+}
+.range::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #fff;
+  border: 2px solid var(--color-signal);
+}
+.range:active::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+
+/* ── Dark footer (always dark, whatever the theme) ────────────────────────── */
+.site-footer {
+  --color-bg: #0b0c10;
+  --color-surface: #121319;
+  --color-line: #23252d;
+  --color-line-strong: #343742;
+  --color-text: #f2f2f4;
+  --color-muted: #9da1ab;
+  --color-faint: #6b6f7a;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* ── Engine console (home/engines.tsx) ────────────────────────────────── */
+.engine-progress {
+  animation: engine-progress 4.2s linear forwards;
+}
+@keyframes engine-progress {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+.engine-swap {
+  animation: engine-swap 0.5s var(--ease-out) both;
+}
+@keyframes engine-swap {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+}
+
+/* Lite mode (no WebGL): a static version of the sunset horizon behind the hero. */
+[data-lite] .hero {
+  background:
+    radial-gradient(120% 60% at 50% 115%, rgb(254 134 74 / 0.35), rgb(226 66 192 / 0.18) 40%, transparent 70%),
+    radial-gradient(40% 40% at 0% 100%, rgb(54 94 207 / 0.18), transparent 70%);
+}
+
+/* ── Reduced motion: keep the content, drop the movement ─────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .intro,
+  .grain {
+    display: none;
+  }
+  .js .split .split-l,
+  .menu-item > a {
+    transform: none !important;
+    transition: none !important;
+  }
+  .verb-track,
+  .marquee-track,
+  .scroll-cue-line::after,
+  .rec-dot,
+  .js .hero-rise {
+    animation: none !important;
+  }
+  #how {
+    height: auto !important;
+  }
+  #how > div {
+    position: static !important;
+    height: auto !important;
+  }
+  .fly-stage {
+    display: none !important;
+  }
+  .fly-list {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    clip-path: none !important;
+    white-space: normal !important;
+    padding: 2.5rem 1rem 6rem !important;
+  }
+  .showcase {
+    height: auto !important;
+  }
+  .showcase > div {
+    position: static !important;
+    height: auto !important;
+    padding: 2rem 0;
+  }
+  .showcase-card {
+    --open: 1;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 1rem;
+    border-radius: 28px !important;
+  }
+}

@@ -5,7 +5,7 @@ import clsx from "clsx";
  * a stylised night-city scene, karaoke-style captions, an action rail and a progress bar.
  */
 export interface ShortCardProps {
-  palette: "sunset" | "neon" | "dawn";
+  palette: "sunset" | "neon" | "dawn" | "arena" | "toxic";
   handle: string;
   caption: string[]; // caption words; the `hot` index is highlighted
   hot: number;
@@ -21,6 +21,9 @@ const PALETTES = {
   sunset: { sky: "from-[#2a0f3d] via-[#c2275a] to-[#ff9a3c]", sun: "bg-[#ffd36b]", city: "#170a23" },
   neon: { sky: "from-[#05121f] via-[#0b3a5c] to-[#19c3c9]", sun: "bg-[#ff4fa3]", city: "#040b14" },
   dawn: { sky: "from-[#1d1240] via-[#6a3ee8] to-[#ff7ab8]", sun: "bg-[#ffe7a8]", city: "#120a2a" },
+  // Esports looks for the hero.
+  arena: { sky: "from-[#060a24] via-[#1f3fbf] to-[#4a72e6]", sun: "bg-[#2ad4d1]", city: "#03061a" },
+  toxic: { sky: "from-[#04120b] via-[#0f5c37] to-[#3ddc84]", sun: "bg-[#e8ff5a]", city: "#020a06" },
 };
 
 const BUILDINGS = [38, 62, 46, 80, 54, 30, 70, 44, 58, 36, 66, 40];
@@ -57,7 +60,7 @@ export function ShortCard({ palette, handle, caption, hot, score, time, likes, c
       </div>
 
       {/* karaoke caption */}
-      <div className="absolute top-[40%] right-[20%] left-[8%] text-center text-[clamp(11px,1.2vw,16px)] leading-tight font-extrabold tracking-tight text-white uppercase [text-shadow:0_2px_10px_rgba(0,0,0,0.6)]">
+      <div className="absolute top-[40%] right-[20%] left-[8%] text-center text-[clamp(10px,1.08vw,14px)] leading-tight font-extrabold tracking-tight text-white uppercase [text-shadow:0_2px_10px_rgba(0,0,0,0.6)]">
         {caption.map((w, i) => (
           <span key={i} className={clsx(i === hot && "text-[#ffd84d]")}>
             {w}{" "}

@@ -1,3 +1,4 @@
+import { categoryOf } from "@shortlark/shared/categories";
 import { useParams } from "react-router";
 import type { VideoData, VideosData } from "@shortlark/shared/api-types";
 import { formatDuration } from "@shortlark/shared/time";
@@ -39,7 +40,7 @@ export function VideosPage() {
           )}
           {!aiConfigured && (
             <div className="mb-6">
-              <Notice tone="warn">AI analysis is off because ANTHROPIC_API_KEY isn&apos;t set. Imports and captions still work.</Notice>
+              <Notice tone="warn">AI analysis is off because GEMINI_API_KEY isn&apos;t set. Imports and captions still work.</Notice>
             </div>
           )}
           <div className="mb-12">
@@ -47,10 +48,28 @@ export function VideosPage() {
           </div>
 
           {videos.length === 0 ? (
-            <EmptyState
-              title="No videos yet"
-              body="Podcasts, interviews, talks, streams and webinars work best: anything with people talking for 10 minutes or more."
-            />
+            <section aria-label="Getting started">
+              <h2 className="text-lg font-semibold tracking-tight">Get your first clips</h2>
+              <p className="mt-1 mb-5 text-sm text-muted">Streams, podcasts, interviews and talks work best: anything with people talking for 10 minutes or more.</p>
+              <ol className="grid gap-3 sm:grid-cols-3">
+                {[
+                  { n: 1, title: "Paste a video link", body: "Use the box above. Captions are read in seconds and the AI ranks every moment.", href: null },
+                  { n: 2, title: "Connect a social account", body: "YouTube, Instagram or Facebook, with a one-click sign-in.", href: "/app/accounts" },
+                  { n: 3, title: "Polish and post", body: "Trim in the editor, let AI write the caption, then post now or schedule.", href: "/app/moments" },
+                ].map((s) => (
+                  <li key={s.n} className="rounded-xl border border-line bg-surface p-4">
+                    <span className="tc flex size-7 items-center justify-center rounded-full bg-signal-soft text-xs font-semibold text-signal">{s.n}</span>
+                    <p className="mt-3 font-medium">{s.title}</p>
+                    <p className="mt-1 text-sm text-muted">{s.body}</p>
+                    {s.href && (
+                      <Link href={s.href} className="mt-3 inline-block text-sm font-medium text-signal hover:underline">
+                        Open {s.n === 2 ? "Social accounts" : "Best moments"}
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </section>
           ) : (
             <div className="grid gap-x-5 gap-y-8 sm:grid-cols-2 xl:grid-cols-3">
               {videos.map((v) => {
@@ -111,9 +130,17 @@ export function VideoPage() {
                       {PLATFORM_LABEL[video.platform]}
                       {video.author ? ` · ${video.author}` : ""} · <span className="tc">{formatDuration(video.durationSec)}</span>
                     </p>
-                    <a href={video.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-sm text-muted hover:text-text">
-                      Open original <IconExternal size={14} />
-                    </a>
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                      <span
+                        className="rounded-md border border-signal/40 bg-signal-soft px-2 py-0.5 text-[13px] font-medium text-signal"
+                        title={`${categoryOf(video.category).label}: ${categoryOf(video.category).looksFor}`}
+                      >
+                        {categoryOf(video.category).engine}
+                      </span>
+                      <a href={video.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm text-muted hover:text-text">
+                        Open original <IconExternal size={14} />
+                      </a>
+                    </div>
                   </div>
                 </div>
 

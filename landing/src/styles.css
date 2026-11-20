@@ -1,4 +1,52 @@
 @import "../../shared/src/styles.css";
+@import "./studio.css";
 
 /* Tailwind only scans this package by default; include the shared brand components. */
 @source "../../shared/src";
+
+/*
+ * Landing-only extras. Brand colours (dusk blue, turquoise, gold) live in the shared tokens so
+ * the web app matches; the sunset gradient is kept for the two headline accents.
+ */
+@theme {
+  /* The landing page is set in Playfair Display (loaded in index.html); the app keeps its own fonts. */
+  --font-sans: "Playfair Display", "Times New Roman", Georgia, serif;
+  --font-display: "Playfair Display", "Times New Roman", Georgia, serif;
+  --color-sunset-blue: #365ecf;
+  --color-sunset-violet: #8449c7;
+  --color-sunset-magenta: #e242c0;
+  --color-sunset-pink: #fd5b96;
+  --color-sunset-coral: #ff7471;
+  --color-sunset-orange: #fe864a;
+  --color-sunset-gold: #ffa73b;
+}
+
+:root {
+  --sunset: linear-gradient(
+    135deg,
+    var(--color-sunset-blue) 0%,
+    var(--color-sunset-violet) 22%,
+    var(--color-sunset-magenta) 42%,
+    var(--color-sunset-pink) 58%,
+    var(--color-sunset-orange) 82%,
+    var(--color-sunset-gold) 100%
+  );
+}
+
+/* The two headline accents carry the full sunset. */
+.text-sunset {
+  background-image: var(--sunset);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  /* Italic serif glyphs overhang their box; keep the gradient under the last letter and under
+     descenders (the gradient only paints inside the box, and display type sets a tight line). */
+  padding-right: 0.08em;
+  padding-bottom: 0.16em;
+  margin-bottom: -0.16em;
+}
+
+.bg-sunset {
+  background-image: var(--sunset);
+}
+

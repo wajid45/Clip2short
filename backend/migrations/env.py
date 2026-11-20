@@ -64,7 +64,9 @@ def run_migrations_online() -> None:
     connectable = engine
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata, render_as_batch=True)
+        # compare_type=False: the original SQLite tables use TEXT/DATETIME names that map to the same
+        # SQLAlchemy types; comparing them would flag every column on each autogenerate.
+        context.configure(connection=connection, target_metadata=target_metadata, render_as_batch=True, compare_type=False)
 
         with context.begin_transaction():
             context.run_migrations()

@@ -181,9 +181,7 @@ function Billing({ d, sp }: { d: Jsonify<BillingData>; sp: URLSearchParams }) {
                   <p className="tc text-2xl font-semibold">
                     {fmt(p.credits)} <span className="text-sm font-normal text-muted">credits</span>
                   </p>
-                  <p className="mt-1 text-sm text-muted">
-                    ${p.price} · {((p.price / p.credits) * 100).toFixed(1)}¢ per minute
-                  </p>
+                  <p className="mt-1 text-sm text-muted">${p.price} one-off</p>
                   <div className="mt-5">
                     {packsAvailable ? (
                       <BuyPackButton
@@ -226,7 +224,6 @@ function Billing({ d, sp }: { d: Jsonify<BillingData>; sp: URLSearchParams }) {
                       <span className="text-4xl font-semibold tracking-tight">${p.price}</span>
                       <span className="text-sm text-muted">/month</span>
                     </p>
-                    <p className="mt-1 text-xs text-faint">{((p.price / p.monthlyCredits) * 100).toFixed(1)}¢ per minute of video</p>
                     <ul className="mt-5 mb-6 flex-1 space-y-2.5">
                       {p.features.map((f) => (
                         <li key={f} className="flex gap-2 text-sm text-muted">

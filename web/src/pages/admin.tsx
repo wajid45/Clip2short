@@ -50,8 +50,8 @@ export function LeadsPage() {
                     <tr key={l.id} className="border-b border-line last:border-0">
                       <td className="px-4 py-2.5 text-text">{l.email}</td>
                       <td className="px-4 py-2.5 text-muted">{l.source === "converted" ? <span className="text-ready">Converted</span> : l.source}</td>
-                      <td className="px-4 py-2.5 text-muted">{[l.utmSource, l.utmMedium, l.utmCampaign].filter(Boolean).join(" / ") || "—"}</td>
-                      <td className="max-w-[220px] truncate px-4 py-2.5 text-muted">{l.referrer ?? "—"}</td>
+                      <td className="px-4 py-2.5 text-muted">{[l.utmSource, l.utmMedium, l.utmCampaign].filter(Boolean).join(" / ") || "·"}</td>
+                      <td className="max-w-[220px] truncate px-4 py-2.5 text-muted">{l.referrer ?? "·"}</td>
                       <td className="tc px-4 py-2.5 text-right text-xs text-muted">{l.createdAt.slice(0, 16).replace("T", " ")}</td>
                     </tr>
                   ))}

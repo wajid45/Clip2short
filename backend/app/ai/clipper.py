@@ -16,8 +16,8 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from ..captions.parse import Segment, transcript_text
-from ..config import settings
-from .client import FALLBACK_BETA, client
+from .client import generate
+from .engines import engine_for, model_for
 
 CATEGORIES = ("insight", "story", "humor", "hot-take", "how-to", "emotional", "data", "quote", "event")
 Category = Literal["insight", "story", "humor", "hot-take", "how-to", "emotional", "data", "quote", "event"]
@@ -47,6 +47,7 @@ class AiClip(BaseModel):
     caption: str = Field(description="Ready-to-post social caption, 1-3 short sentences, no hashtags")
     hashtags: list[str] = Field(description="3-5 relevant hashtags without the # symbol")
     category: Category
+    moment: str = Field(default="", description="2-3 word label for the kind of moment, e.g. 'Goal event' or 'Clutch play'; use the <category> vocabulary when one fits")
     score_hook: int = Field(description="0-100: does the first 3 seconds stop the scroll?")
     score_self_contained: int = Field(description="0-100: understandable with zero context?")
     score_payoff: int = Field(description="0-100: clear takeaway, punchline or resolution?")
@@ -70,7 +71,7 @@ Judge each candidate on four criteria, in priority order:
 3. Payoff (score_payoff): the viewer leaves with something: an insight, a punchline, a resolution, a useful step. No payoff means below 50.
 4. Quotability (score_quotability): at least one line that people would repeat, stitch or comment on.
 
-Overall score bands — be harsh, most moments are not clips:
+Overall score bands (be harsh, most moments are not clips):
 - 85-100: would likely outperform the creator's average; strong on all four criteria.
 - 70-84: solid, publishable with a good caption.
 - 50-69: usable filler.
@@ -86,6 +87,7 @@ Rules:
 - "reason" speaks to the creator in plain language ("Opens with a counter-intuitive claim and pays it off with a concrete number").
 - If the transcript timing is marked as estimated, still choose by content; timings will be refined by the creator.
 - Live streams and gameplay: much of what happens on screen is only visible through the streamer's reactions and narration. Sudden exclamations, laughter, shouting, swearing, "chat" call-outs and abrupt topic changes usually mark an event; build clips around them.
+- Follow the <category> brief: it describes this kind of video, what its highlights are, the ideal clip length and the moment labels to use.
 - Follow the <focus> instruction in the request when choosing between candidates."""
 
 
@@ -105,6 +107,7 @@ class FinalClip:
     scoreQuote: int
     reason: str
     transcript: str
+    moment: str = ""
 
 
 def _clamp(n: float, lo: int = 0, hi: int = 100) -> int:
@@ -157,6 +160,7 @@ def finalize_clips(raw: list[AiClip], segments: list[Segment]) -> list[FinalClip
                 scoreQuote=_clamp(c.score_quotability),
                 reason=c.reason.strip(),
                 transcript=transcript_text(segments, start, end),
+                moment=c.moment.strip()[:40],
             )
         )
     # Remove overlaps, keeping the higher-scoring clip.
@@ -170,11 +174,19 @@ def finalize_clips(raw: list[AiClip], segments: list[Segment]) -> list[FinalClip
 
 
 def analyze_transcript(
-    *, title: str, description: str, duration_sec: float | None, segments: list[Segment], timing: str, focus: str = "auto"
+    *,
+    title: str,
+    description: str,
+    duration_sec: float | None,
+    segments: list[Segment],
+    timing: str,
+    focus: str = "auto",
+    category: str | None = None,
 ) -> tuple[str, list[FinalClip]]:
     if len(segments) < 3:
         raise ValueError("The transcript is too short to find clips.")
     target = target_clip_count(duration_sec, len(segments))
+    engine = engine_for(category)
     transcript = "\n".join(f"[{i}] {float(s['start']):.1f}s {s['text']}" for i, s in enumerate(segments))
     user_content = f"""<video>
 <title>{title}</title>
@@ -187,28 +199,22 @@ def analyze_transcript(
 {transcript}
 </transcript>
 
+<category name="{engine.label}">
+{engine.brief}
+Ideal clip length for this category: {engine.clip_seconds[0]}-{engine.clip_seconds[1]} seconds.
+Moment labels for this category: {", ".join(engine.labels)}.
+</category>
+
 <focus>{FOCUS_GUIDE.get(focus, FOCUS_GUIDE["auto"])}</focus>
 
 Find up to {target} of the best clip-worthy moments for this focus (fewer if the material doesn't support that many). Order them best first."""
 
-    with client().beta.messages.stream(
-        model=settings.anthropic_model,
-        max_tokens=64000,
-        betas=[FALLBACK_BETA],
-        fallbacks="default",
-        thinking={"type": "adaptive"},
-        output_config={"effort": "high"},
-        output_format=AnalysisResult,
-        system=[{"type": "text", "text": SYSTEM, "cache_control": {"type": "ephemeral"}}],
-        messages=[{"role": "user", "content": user_content}],
-    ) as stream:
-        message = stream.get_final_message()
-
-    if message.stop_reason == "refusal":
-        raise RuntimeError("The AI declined to analyse this video's content.")
-    if message.stop_reason == "max_tokens":
-        raise RuntimeError("The AI response was cut off. Please retry.")
-    parsed = message.parsed_output
-    if not parsed:
-        raise RuntimeError("The AI returned an unreadable result. Please retry.")
+    parsed = generate(
+        AnalysisResult,
+        system=SYSTEM,
+        prompt=user_content,
+        thinking=engine.thinking,
+        refusal_message="The AI declined to analyse this video's content.",
+        model=model_for(category),
+    )
     return parsed.summary.strip(), finalize_clips(parsed.clips, segments)

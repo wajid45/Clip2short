@@ -6,6 +6,7 @@
   "description": "Code shared by the server, web app and landing page: pricing, time helpers, brand components and design tokens.",
   "exports": {
     "./plans": "./src/plans.ts",
+    "./categories": "./src/categories.ts",
     "./time": "./src/time.ts",
     "./social": "./src/social.ts",
     "./video-source": "./src/video-source.ts",

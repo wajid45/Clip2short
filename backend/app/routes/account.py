@@ -4,6 +4,7 @@ import csv
 import hmac
 import io
 import re
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 
 import httpx
@@ -12,18 +13,22 @@ from fastapi.responses import Response
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
+from .. import notify
 from ..auth import require_admin, require_user
+from ..background import after
 from ..config import settings
 from ..credits import by_source, credit_summary, ensure_trial
 from ..db import get_db, utcnow
 from ..http import HttpError, iso, json_response, validate
 from ..integrations import INTEGRATIONS, load_integrations
-from ..models import CreditTransaction, IntegrationSetting, Lead, User
-from ..ratelimit import rate_limit
-from ..security import clear_session, encrypt, hash_password, set_session, verify_password
+from ..models import CreditTransaction, IntegrationSetting, Lead, RevokedSession, User
+from ..passwords import MAX_LENGTH, password_problem
+from ..ratelimit import rate_limit, rate_limit_account
+from ..security import MAX_AGE, clear_session, encrypt, hash_password, needs_rehash, session_payload, set_session, verify_password
 from ..social.publisher import refresh_stats, run_publisher
 from ..video.fetcher import BROWSER_UA
 from .common import JsonBody, Model, api_router, email, text
+from .two_factor import enabled_2fa, make_challenge
 
 router = api_router()
 
@@ -32,25 +37,34 @@ router = api_router()
 
 
 class Login(Model):
-    email: text(0)  # type: ignore[valid-type]
-    password: text(1, strip=False)  # type: ignore[valid-type]
+    email: text(0, 320)  # type: ignore[valid-type]
+    password: text(1, 1024, strip=False)  # type: ignore[valid-type]
 
 
 class Signup(Model):
     name: text(1, 80, min_msg="Enter your name")  # type: ignore[valid-type]
     email: email("Enter a valid email")  # type: ignore[valid-type]
-    password: text(8, 200, min_msg="Use at least 8 characters", strip=False)  # type: ignore[valid-type]
+    password: text(1, MAX_LENGTH * 4, strip=False)  # type: ignore[valid-type]  (policy: passwords.password_problem)
 
 
 @router.post("/auth/login")
 def login(request: Request, body: JsonBody, s: Session = Depends(get_db)):
     rate_limit(request, "login", 20, 15 * 60)
     b = validate(Login, body)
+    rate_limit_account("login", b.email, 10, 15 * 60)
     user = s.scalar(select(User).where(User.email == b.email.lower()))
     if not verify_password(b.password, user.passwordHash if user else None) or not user:
         raise HttpError(401, "That email and password don't match.")
+    if user.suspendedAt is not None:
+        raise HttpError(403, "This account is suspended. Contact support if you think this is a mistake.", "suspended")
+    if needs_rehash(user.passwordHash):
+        user.passwordHash = hash_password(b.password)  # upgrade an older hash while we have the password
+        s.commit()
+    if enabled_2fa(s, user.id):
+        # Password is right; the session waits for the authenticator code (routes/two_factor.py).
+        return json_response({"step": "code", "challenge": make_challenge(user)})
     res = json_response({"ok": True})
-    set_session(res, user.id)
+    set_session(res, user.id, user.sessionVersion)
     return res
 
 
@@ -59,7 +73,9 @@ def signup(request: Request, body: JsonBody, s: Session = Depends(get_db)):
     rate_limit(request, "signup", 10, 60 * 60)
     b = validate(Signup, body)
     if s.scalar(select(User.id).where(User.email == b.email)):
-        raise HttpError(409, "An account with this email already exists. Sign in instead.")
+        raise HttpError(409, "An account with this email already exists. Sign in instead, or reset your password if you forgot it.", "account_exists")
+    if problem := password_problem(b.password, email=b.email, name=b.name):
+        raise HttpError(400, problem, "weak_password")
     user = User(name=b.name, email=b.email, passwordHash=hash_password(b.password))
     s.add(user)
     s.commit()
@@ -67,13 +83,23 @@ def signup(request: Request, body: JsonBody, s: Session = Depends(get_db)):
     s.execute(update(Lead).where(Lead.email == b.email).values(source="converted"))
     s.commit()
     ensure_trial(s, user.id)
+    after(notify.welcome, user.id)
     res = json_response({"ok": True})
-    set_session(res, user.id)
+    set_session(res, user.id, user.sessionVersion)
     return res
 
 
 @router.post("/auth/logout")
-def logout():
+def logout(request: Request, s: Session = Depends(get_db)):
+    """Ends this session on the server too, so a copied cookie stops working."""
+    payload = session_payload(request)
+    jti = payload.get("jti") if payload else None
+    if payload and isinstance(jti, str) and not s.get(RevokedSession, jti):
+        now = utcnow()
+        s.query(RevokedSession).filter(RevokedSession.expiresAt < now).delete()
+        exp = payload.get("exp")
+        s.add(RevokedSession(jti=jti, expiresAt=datetime.fromtimestamp(exp, UTC) if isinstance(exp, int) else now + timedelta(seconds=MAX_AGE)))
+        s.commit()
     res = json_response({"ok": True})
     clear_session(res)
     return res

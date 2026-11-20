@@ -100,3 +100,37 @@ export const IconStepBack = (p: P) => (
 export const IconStepFwd = (p: P) => (
   <Icon {...p}><path d="m5 5 6 5-6 5zM15 5v10" /></Icon>
 );
+export const IconMenu = (p: P) => (
+  <Icon {...p}>
+    <path d="M3.5 6h13M3.5 10h13M3.5 14h13" />
+  </Icon>
+);
+export const IconChevronDown = (p: P) => (
+  <Icon {...p}>
+    <path d="m5.5 8 4.5 4.5L14.5 8" />
+  </Icon>
+);
+export const IconSettings = (p: P) => (
+  <Icon {...p}>
+    <circle cx="10" cy="10" r="2.6" />
+    <path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4" />
+  </Icon>
+);
+export const IconHelp = (p: P) => (
+  <Icon {...p}>
+    <circle cx="10" cy="10" r="7.5" />
+    <path d="M7.9 7.8a2.2 2.2 0 1 1 3 2.1c-.6.3-.9.8-.9 1.4v.4" />
+    <path d="M10 14.3h.01" />
+  </Icon>
+);
+export const IconMail = (p: P) => (
+  <Icon {...p}>
+    <rect x="2.5" y="4.5" width="15" height="11" rx="2" />
+    <path d="m3 5.5 7 5.5 7-5.5" />
+  </Icon>
+);
+export const IconShield = (p: P) => (
+  <Icon {...p}>
+    <path d="M10 2.5 4 5v4.6c0 3.7 2.6 6.6 6 7.9 3.4-1.3 6-4.2 6-7.9V5l-6-2.5Z" />
+  </Icon>
+);

@@ -55,6 +55,11 @@ class User(Base, Serializable):
     cancelAtPeriodEnd: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     # Credits: the free trial is granted once.
     trialStartedAt: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    # Bumped on password change/reset so every other session is signed out.
+    sessionVersion: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    # Set by an admin in the portal: the account can't sign in until it is lifted.
+    suspendedAt: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    suspendedReason: Mapped[str | None] = mapped_column(String)
 
 
 class CreditGrant(Base, Serializable):
@@ -113,6 +118,8 @@ class Video(Base, Serializable):
     analysisStatus: Mapped[str] = mapped_column(String, nullable=False, default="idle")
     analysisCount: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     analysisFocus: Mapped[str] = mapped_column(String, nullable=False, default="auto")
+    # Picked on import: podcast | gaming | movies | sports | other. Chooses the AI engine (app/ai/engines.py).
+    category: Mapped[str] = mapped_column(String, nullable=False, default="other", server_default="other")
     analysisError: Mapped[str | None] = mapped_column(String)
     analyzedAt: Mapped[datetime | None] = mapped_column(UTCDateTime)
     summary: Mapped[str | None] = mapped_column(String)
@@ -134,6 +141,7 @@ class Clip(Base, Serializable):
     status: Mapped[str] = mapped_column(String, nullable=False, default="idea")  # idea | draft | ready | published
     origin: Mapped[str] = mapped_column(String, nullable=False, default="ai")  # ai | manual
     category: Mapped[str | None] = mapped_column(String)
+    momentLabel: Mapped[str | None] = mapped_column(String)  # "Goal event", "Clutch play" ... from the category engine
     score: Mapped[int | None] = mapped_column(Integer)
     scoreHook: Mapped[int | None] = mapped_column(Integer)
     scoreSelf: Mapped[int | None] = mapped_column(Integer)
@@ -256,3 +264,90 @@ class ProcessedWebhook(Base):
     __tablename__ = "ProcessedWebhook"
     id: Mapped[str] = mapped_column(String, primary_key=True)  # Stripe event id, for idempotency
     createdAt: Mapped[datetime] = _created()
+
+
+class PasswordReset(Base):
+    """A one-time password-reset link. Only a hash of the token is stored."""
+
+    __tablename__ = "PasswordReset"
+    id: Mapped[str] = _id()
+    userId: Mapped[str] = _user_fk()
+    tokenHash: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    expiresAt: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+    usedAt: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    createdAt: Mapped[datetime] = _created()
+
+
+class ContactMessage(Base, Serializable):
+    """A message sent from the landing site's contact form."""
+
+    __tablename__ = "ContactMessage"
+    id: Mapped[str] = _id()
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    email: Mapped[str] = mapped_column(String, nullable=False)
+    topic: Mapped[str] = mapped_column(String, nullable=False, default="general")
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    userAgent: Mapped[str | None] = mapped_column(String)
+    handled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+    createdAt: Mapped[datetime] = _created()
+    __table_args__ = (Index("ContactMessage_createdAt_idx", "createdAt"),)
+
+
+class AdminTotp(Base):
+    """An admin's authenticator app (TOTP, RFC 6238) for the admin portal sign-in.
+
+    `pendingSecretEnc` holds a replacement while it is being confirmed, so the current one keeps
+    working until the new phone proves it has the secret. `lastStep` blocks replaying a used code.
+    """
+
+    __tablename__ = "AdminTotp"
+    userId: Mapped[str] = mapped_column(String, ForeignKey("User.id", ondelete="CASCADE", onupdate="CASCADE"), primary_key=True)
+    secretEnc: Mapped[str | None] = mapped_column(String)
+    pendingSecretEnc: Mapped[str | None] = mapped_column(String)
+    enabledAt: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    lastStep: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    # Bumped when the authenticator is replaced: signs out every other portal session.
+    sessionVersion: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    updatedAt: Mapped[datetime] = _updated()
+
+
+class AdminAudit(Base, Serializable):
+    """Append-only record of what admins did in the portal (sign-ins, credit grants, suspensions)."""
+
+    __tablename__ = "AdminAudit"
+    id: Mapped[str] = _id()
+    adminId: Mapped[str | None] = mapped_column(String, ForeignKey("User.id", ondelete="SET NULL", onupdate="CASCADE"))
+    adminEmail: Mapped[str] = mapped_column(String, nullable=False)
+    action: Mapped[str] = mapped_column(String, nullable=False)
+    targetUserId: Mapped[str | None] = mapped_column(String, ForeignKey("User.id", ondelete="SET NULL", onupdate="CASCADE"))
+    detail: Mapped[str | None] = mapped_column(String)
+    ip: Mapped[str | None] = mapped_column(String)
+    createdAt: Mapped[datetime] = _created()
+    __table_args__ = (
+        Index("AdminAudit_createdAt_idx", "createdAt"),
+        Index("AdminAudit_targetUserId_createdAt_idx", "targetUserId", "createdAt"),
+    )
+
+
+class RevokedSession(Base):
+    """App sessions ended by signing out. Kept until the token would have expired anyway."""
+
+    __tablename__ = "RevokedSession"
+    jti: Mapped[str] = mapped_column(String, primary_key=True)
+    expiresAt: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+    __table_args__ = (Index("RevokedSession_expiresAt_idx", "expiresAt"),)
+
+
+class UserTwoFactor(Base):
+    """Optional two-factor sign-in for app users, turned on in Settings (authenticator app, TOTP).
+
+    `recoveryHashes` holds SHA-256 hashes of unused one-time backup codes, space-separated.
+    """
+
+    __tablename__ = "UserTwoFactor"
+    userId: Mapped[str] = mapped_column(String, ForeignKey("User.id", ondelete="CASCADE", onupdate="CASCADE"), primary_key=True)
+    secretEnc: Mapped[str | None] = mapped_column(String)
+    pendingSecretEnc: Mapped[str | None] = mapped_column(String)
+    enabledAt: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    lastStep: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    recoveryHashes: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")

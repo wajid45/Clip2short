@@ -11,8 +11,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from ..config import settings
-from .client import FALLBACK_BETA, client
+from .client import generate
 
 
 class Suggestion(BaseModel):
@@ -70,23 +69,14 @@ def suggest_copy(
 
 Write the posting copy for this clip."""
 
-    message = client().beta.messages.parse(
-        model=settings.anthropic_model,
-        max_tokens=16000,
-        betas=[FALLBACK_BETA],
-        fallbacks="default",
-        output_config={"effort": "medium"},
-        output_format=Suggestion,
-        system=[{"type": "text", "text": SYSTEM, "cache_control": {"type": "ephemeral"}}],
-        messages=[{"role": "user", "content": content}],
+    s = generate(
+        Suggestion,
+        system=SYSTEM,
+        prompt=content,
+        thinking="medium",
+        refusal_message="The AI declined to write copy for this clip.",
+        max_output_tokens=16000,
     )
-    if message.stop_reason == "refusal":
-        raise RuntimeError("The AI declined to write copy for this clip.")
-    if message.stop_reason == "max_tokens":
-        raise RuntimeError("The AI response was cut off. Please retry.")
-    s = message.parsed_output
-    if not s:
-        raise RuntimeError("The AI returned an unreadable result. Please retry.")
     out = s.model_dump()
     out["hashtags"] = [t for t in (re.sub(r"\s+", "", h.lstrip("#")) for h in s.hashtags) if t][:8]
     return out

@@ -5,6 +5,7 @@ In-memory, so per process; put a shared store (Redis) in front for multi-instanc
 
 from __future__ import annotations
 
+import hashlib
 import threading
 import time
 
@@ -26,7 +27,19 @@ def client_ip(request: Request) -> str:
 
 
 def rate_limit(request: Request, key: str, limit: int, window_sec: float) -> None:
-    bucket = f"{key}:{client_ip(request)}"
+    """Per client IP."""
+    hit(f"{key}:{client_ip(request)}", limit, window_sec)
+
+
+def rate_limit_account(key: str, email: str, limit: int, window_sec: float) -> None:
+    """Per account, whichever IP the attempts come from (credential stuffing, email bombing).
+
+    Applies to any email typed, existing or not, so the limit itself reveals nothing.
+    """
+    hit(f"{key}:acct:{hashlib.sha256(email.strip().lower().encode()).hexdigest()}", limit, window_sec)
+
+
+def hit(bucket: str, limit: int, window_sec: float) -> None:
     now = time.monotonic()
     with _lock:
         count, reset = _buckets.get(bucket, (0, 0.0))

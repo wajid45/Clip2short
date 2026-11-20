@@ -2,17 +2,20 @@
 
 /*
  * Shortlark design tokens.
- * Dark is the default (video tools read best on graphite); light is a warm paper theme.
+ * Dark is the default (video tools read best on graphite); light is a clean white theme.
  * Theme = the `data-theme` attribute on <html> (set from the sl_theme cookie), or the
  * system preference when the user picks "System".
  */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @theme {
-  /* Loaded from Google Fonts in each app's index.html. */
-  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "Geist Mono", ui-monospace, monospace;
-  --font-display: "Instrument Serif", Georgia, serif;
+  /*
+   * Times New Roman throughout. Tinos (Google Fonts, loaded in each index.html) has the same
+   * shapes and metrics, so devices without Times New Roman render identically.
+   */
+  --font-sans: "Times New Roman", Tinos, Times, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-display: "Times New Roman", Tinos, Times, serif;
 
   --color-bg: #0c0c0d;
   --color-surface: #141416;
@@ -24,10 +27,15 @@
   --color-muted: #9a9aa3;
   --color-faint: #63636d;
 
-  --color-signal: #ff5b23;
-  --color-signal-strong: #ff7444;
-  --color-signal-soft: #ff5b2322;
+  /* Brand: ember orange primary (buttons, links, focus), turquoise for labels, gold for highlights.
+     The orange is deep enough for white button text (4.3:1). */
+  --color-signal: #d9480f;
+  --color-signal-strong: #bf3d0b;
+  --color-signal-soft: #d9480f29;
   --color-on-signal: #ffffff;
+  --color-vice: #2ad4d1;
+  --color-gold: #fcae03;
+  --color-on-gold: #1a1406;
 
   --color-idea: #8b93a7;
   --color-draft: #e0a43b;
@@ -106,18 +114,19 @@
   }
   :root[data-theme="light"] {
     color-scheme: light;
-    --color-bg: #f7f6f3;
+    --color-bg: #ffffff;
     --color-surface: #ffffff;
-    --color-surface-2: #f1efea;
-    --color-surface-3: #e7e4dd;
-    --color-line: #e3dfd7;
-    --color-line-strong: #cdc8bd;
-    --color-text: #141414;
-    --color-muted: #5c5a55;
-    --color-faint: #8b887f;
-    --color-signal: #f2541b;
-    --color-signal-strong: #db450f;
-    --color-signal-soft: #f2541b1f;
+    --color-surface-2: #f5f6f8;
+    --color-surface-3: #eceef2;
+    --color-line: #e6e8ec;
+    --color-line-strong: #d2d6dd;
+    --color-text: #111318;
+    --color-muted: #555b66;
+    --color-faint: #8a909b;
+    --color-signal: #d9480f;
+    --color-signal-strong: #bf3d0b;
+    --color-signal-soft: #d9480f1a;
+    --color-vice: #0b7f86;
     --color-idea: #667085;
     --color-draft: #a86a12;
     --color-ready: #1b8456;
@@ -129,18 +138,19 @@
   @media (prefers-color-scheme: light) {
     :root:not([data-theme]) {
       color-scheme: light;
-      --color-bg: #f7f6f3;
+      --color-bg: #ffffff;
       --color-surface: #ffffff;
-      --color-surface-2: #f1efea;
-      --color-surface-3: #e7e4dd;
-      --color-line: #e3dfd7;
-      --color-line-strong: #cdc8bd;
-      --color-text: #141414;
-      --color-muted: #5c5a55;
-      --color-faint: #8b887f;
-      --color-signal: #f2541b;
-      --color-signal-strong: #db450f;
-      --color-signal-soft: #f2541b1f;
+      --color-surface-2: #f5f6f8;
+      --color-surface-3: #eceef2;
+      --color-line: #e6e8ec;
+      --color-line-strong: #d2d6dd;
+      --color-text: #111318;
+      --color-muted: #555b66;
+      --color-faint: #8a909b;
+      --color-signal: #d9480f;
+      --color-signal-strong: #bf3d0b;
+      --color-signal-soft: #d9480f1a;
+      --color-vice: #0b7f86;
       --color-idea: #667085;
       --color-draft: #a86a12;
       --color-ready: #1b8456;
@@ -173,7 +183,7 @@ body {
   color: #fff;
 }
 
-:focus-visible {
+:focus-visible:not(.no-ring) {
   outline: 2px solid var(--color-signal);
   outline-offset: 2px;
 }

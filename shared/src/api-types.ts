@@ -23,6 +23,7 @@ export type VideosData = {
     id: string;
     createdAt: Date;
     platform: string;
+    category: string;
     title: string;
     author: string | null;
     durationSec: number | null;
@@ -50,6 +51,7 @@ export type VideoData = {
       status: string;
       origin: string;
       category: string | null;
+      momentLabel: string | null;
       score: number | null;
       scoreHook: number | null;
       scoreSelf: number | null;
@@ -83,6 +85,7 @@ export type VideoData = {
     analysisStatus: string;
     analysisCount: number;
     analysisFocus: string;
+    category: string;
     analysisError: string | null;
     analyzedAt: Date | null;
     summary: string | null;
@@ -102,6 +105,7 @@ export type ClipData = {
     endSec: number;
     status: string;
     category: string | null;
+    momentLabel: string | null;
     hook: string;
     caption: string;
     hashtags: string;
@@ -155,6 +159,7 @@ export type MomentsData = {
     status: string;
     origin: string;
     category: string | null;
+    momentLabel: string | null;
     score: number | null;
     scoreHook: number | null;
     scoreSelf: number | null;
@@ -173,6 +178,8 @@ export type MomentsData = {
   min: number;
   unposted: boolean;
   pageSize: number;
+  label: string;
+  labels: string[];
 };
 
 export type LibraryData = {
@@ -304,4 +311,30 @@ export type IntegrationsData = {
     hasSavedSecret: boolean;
     source: "app" | "env" | "none";
   }[];
+};
+
+export type SettingsData = {
+  name: string;
+  email: string;
+  createdAt: Date;
+  planName: string | null;
+  hasSubscription: boolean;
+  videos: number;
+  clips: number;
+  accounts: number;
+  twoFactor: { enabled: boolean; enabledAt: Date | null; backupCodesLeft: number };
+};
+
+export type MessagesData = {
+  messages: {
+    id: string;
+    name: string;
+    email: string;
+    topic: string;
+    message: string;
+    handled: boolean;
+    createdAt: Date;
+  }[];
+  open: number;
+  emailConfigured: boolean;
 };

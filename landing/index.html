@@ -9,7 +9,7 @@
       content="Paste a stream or video link. Shortlark's AI finds the moments worth clipping, scores them, writes hooks and captions, and posts them to YouTube Shorts, Instagram and Facebook."
     />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0c0c0d" />
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f7f6f3" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Shortlark" />
     <meta property="og:title" content="Shortlark · Turn long streams into Shorts and Reels" />
@@ -25,10 +25,18 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..600&family=Instrument+Serif:ital@0;1&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=IBM+Plex+Mono:wght@400;500&display=swap"
     />
     <script>
-      // Apply the saved theme before first paint (no light/dark flash).
+      // Apply the saved theme before first paint (no light/dark flash). "js" turns on the
+      // entrance animations; the opening curtain plays once per browser session.
+      document.documentElement.classList.add("js");
+      try {
+        if (sessionStorage.getItem("sl_intro")) document.documentElement.classList.add("intro-seen");
+        else if (location.pathname === "/") sessionStorage.setItem("sl_intro", "1");
+      } catch (e) {
+        document.documentElement.classList.add("intro-seen");
+      }
       try {
         var m = document.cookie.match(/(?:^|; )sl_theme=(light|dark)/);
         if (m) document.documentElement.setAttribute("data-theme", m[1]);

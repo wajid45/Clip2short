@@ -1,12 +1,15 @@
 import clsx from "clsx";
 import { Link } from "@/lib/nav";
+import { useState } from "react";
+import { PasswordToggle } from "@shortlark/shared/components/password-toggle";
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "react";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "sm" | "md" | "lg";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-signal text-white hover:bg-signal-strong disabled:bg-signal/50",
+  // Same dusk blue and hover as the landing page CTAs. Disabled keeps the hue and only fades.
+  primary: "bg-signal text-on-signal shadow-sm shadow-signal/20 hover:bg-signal-strong disabled:hover:bg-signal disabled:shadow-none",
   secondary: "bg-surface-2 text-text border border-line hover:border-line-strong hover:bg-surface-3",
   ghost: "text-muted hover:text-text hover:bg-surface-2",
   danger: "bg-transparent text-danger border border-danger/40 hover:bg-danger/10",
@@ -73,10 +76,30 @@ export function Spinner({ className }: { className?: string }) {
 }
 
 export const inputClass =
-  "w-full rounded-lg border border-line bg-surface px-3 text-sm text-text placeholder:text-faint transition-colors hover:border-line-strong focus:border-signal focus:outline-none";
+  "w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-text placeholder:text-faint transition-[border-color,box-shadow] hover:border-faint focus:border-signal focus:ring-3 focus:ring-signal/20 focus:outline-none dark:border-[#47474f] dark:bg-surface-2 dark:placeholder:text-muted/75 dark:hover:border-[#5a5a63]";
 
 export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={clsx(inputClass, "h-10", className)} {...rest} />;
+}
+
+/** Password field with a show/hide toggle. */
+export function PasswordInput({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
+  const [shown, setShown] = useState(false);
+  return (
+    <div className="relative">
+      <input {...rest} type={shown ? "text" : "password"} className={clsx(inputClass, "h-10 pr-11", className)} />
+      <PasswordToggle shown={shown} onToggle={() => setShown((v) => !v)} />
+    </div>
+  );
+}
+
+/** Small helper line under a field. */
+export function FieldHint({ children, id }: { children: ReactNode; id?: string }) {
+  return (
+    <p id={id} className="mt-1.5 text-xs leading-relaxed text-faint">
+      {children}
+    </p>
+  );
 }
 
 export function Textarea({ className, ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement>) {

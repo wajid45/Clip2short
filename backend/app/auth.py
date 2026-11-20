@@ -10,17 +10,24 @@ from .config import settings
 from .credits import credit_summary
 from .db import get_db
 from .http import HttpError
-from .models import Post, SocialAccount, User
+from .models import Post, RevokedSession, SocialAccount, User
 from .plans import has_active_subscription, limits_for
-from .security import session_user_id
+from .security import session_payload
 
 
 def current_user(request: Request, s: Session) -> User | None:
     cached = getattr(request.state, "user", False)
     if cached is not False:
         return cached
-    uid = session_user_id(request)
-    user = s.get(User, uid) if uid else None
+    payload = session_payload(request)
+    sub, version, jti = (payload.get("sub"), payload.get("v", 0), payload.get("jti")) if payload else (None, 0, None)
+    user = s.get(User, sub) if isinstance(sub, str) else None
+    if user and version != user.sessionVersion:
+        user = None  # signed out everywhere after a password change
+    if user and isinstance(jti, str) and s.get(RevokedSession, jti):
+        user = None  # this session was signed out
+    if user and user.suspendedAt is not None:
+        user = None  # suspended by an admin
     request.state.user = user
     return user
 
