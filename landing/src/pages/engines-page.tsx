@@ -1,7 +1,7 @@
 import { CATEGORIES, type Category } from "@shortlark/shared/categories";
 import { PageHero } from "../site/page-hero";
 import { SplitRise } from "../motion/split";
-import { Eyebrow, FaqList, FinalCta, Section, SectionHead, Tags, type QA } from "../site/kit";
+import { Eyebrow, FaqList, FinalCta, Section, SectionHead, Steps, Tags, type QA } from "../site/kit";
 import { DEMO } from "../content/site";
 
 const SCALE = 90; // seconds shown on the clip-length rulers
@@ -172,64 +172,135 @@ export function EnginesPage() {
   );
 }
 
+/** How each engine cuts, taken from its brief in backend/app/ai/engines.py. */
+const METHOD: Record<string, { title: string; body: string }[]> = {
+  podcast: [
+    { title: "Reads the whole episode", body: "Strong or contrarian opinions, stories with a payoff, surprising numbers, disagreements between hosts and guests, practical advice." },
+    { title: "Starts on the claim", body: "Each clip opens on the point itself, not on the host's question, unless the question is the hook." },
+    { title: "Ends when it lands", body: "The clip runs until the explanation or the punchline has landed, so it stands on its own." },
+  ],
+  gaming: [
+    { title: "Listens for reactions", body: "On a stream, the action shows up in the streamer's voice: the shout, the laugh, \"no way\", the panic narration." },
+    { title: "Starts before the play", body: "Each clip begins a few seconds before the action builds, so viewers see it coming." },
+    { title: "Keeps the payoff and the reaction", body: "The clip holds the play itself and ends once the reaction has landed." },
+  ],
+  movies: [
+    { title: "Finds the scenes people share", body: "Iconic lines, plot twists, emotional and action peaks; in reviews and reactions, the verdict and the hottest take." },
+    { title: "Keeps captions spoiler-free", body: "Titles and captions don't give away the story, unless the moment itself is the reveal." },
+    { title: "Credits what isn't yours", body: "Captions never suggest you own the film or series you are reviewing or reacting to." },
+  ],
+  sports: [
+    { title: "Follows the commentary", body: "A spike in commentary energy marks a play: goals, saves, red cards, comebacks, celebrations." },
+    { title: "Cuts around the play", body: "Each clip starts 5 to 10 seconds before the play develops and ends after the call and the first replay." },
+    { title: "Names the event and the score", body: "When the commentary says them, the title carries the event and the score." },
+  ],
+  other: [
+    { title: "Weighs every kind of moment", body: "A clear insight, a story, a how-to, a big laugh: the general engine doesn't favour one kind." },
+    { title: "Keeps clips that stand alone", body: "It picks the moments that make sense without the rest of the video." },
+    { title: "Explains every pick", body: "Each clip gets a label, a score from 0 to 100 and a plain-English reason." },
+  ],
+};
+
 function EngineView({ c }: { c: Category }) {
   const example = (DEMO as Record<string, (typeof DEMO)["sports"]>)[c.id];
+  const others = CATEGORIES.filter((o) => o.id !== c.id);
   return (
     <>
       <PageHero eyebrow={`Category engines · ${c.engine}`} title={`AI clipping for ${c.label.toLowerCase()}`} body={c.summary} />
 
+      {/* At a glance: three facts side by side, split by hairlines */}
       <Section border={false} className="!pt-0">
-        <div className="grid gap-4 lg:grid-cols-3">
-          <div className="rounded-[24px] border border-line bg-surface p-7">
-            <Eyebrow>Looks for</Eyebrow>
-            <p className="mt-4 text-[22px] leading-snug tracking-[-0.01em]">{c.looksFor}</p>
+        <dl className="grid border-y border-line lg:grid-cols-3">
+          <div className="py-8 lg:pr-10">
+            <dt>
+              <Eyebrow>Looks for</Eyebrow>
+            </dt>
+            <dd className="mt-5 text-[clamp(22px,2vw,28px)] leading-snug tracking-[-0.01em]">{c.looksFor}</dd>
           </div>
-          <div className="rounded-[24px] border border-line bg-surface p-7">
-            <Eyebrow>Clip length</Eyebrow>
-            <p className="mt-4 text-[40px] leading-none tracking-[-0.03em]">
-              {c.clipSeconds[0]} to {c.clipSeconds[1]}
-              <span className="hud ml-2 text-muted">seconds</span>
-            </p>
+          <div className="border-t border-line py-8 lg:border-t-0 lg:border-l lg:px-10">
+            <dt>
+              <Eyebrow>Clip length</Eyebrow>
+            </dt>
+            <dd className="mt-5">
+              <p className="text-[clamp(36px,3.4vw,48px)] leading-none tracking-[-0.03em]">
+                {c.clipSeconds[0]} to {c.clipSeconds[1]}
+                <span className="hud ml-2 text-muted">seconds</span>
+              </p>
+              <div className="mt-5 max-w-[320px]">
+                <LengthBar range={c.clipSeconds} ticks />
+              </div>
+            </dd>
           </div>
-          <div className="rounded-[24px] border border-line bg-surface p-7">
-            <Eyebrow>Best for</Eyebrow>
-            <ul className="mt-4 space-y-1.5 text-[17px]">
-              {c.sources.map((s) => (
-                <li key={s}>{s}</li>
-              ))}
-            </ul>
+          <div className="border-t border-line py-8 lg:border-t-0 lg:border-l lg:pl-10">
+            <dt>
+              <Eyebrow>Best for</Eyebrow>
+            </dt>
+            <dd>
+              <ul className="mt-5 space-y-2.5 text-[18px]">
+                {c.sources.map((s) => (
+                  <li key={s} className="flex gap-3">
+                    <span aria-hidden="true" className="mt-[11px] size-1.5 shrink-0 rounded-full bg-signal" />
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </dd>
           </div>
-        </div>
+        </dl>
       </Section>
 
+      {/* How it cuts, from the engine's brief */}
       <Section>
-        <SectionHead eyebrow="Moment labels" title="How it tags each clip" intro="Every clip in your shortlist carries one of these, so you can see what kind of moment it is at a glance." />
-        <div className="mt-10">
-          <Tags items={c.labels} />
-        </div>
+        <SectionHead eyebrow="How it cuts" title={`What the ${c.engine.toLowerCase()} does differently`} />
+        <Steps steps={METHOD[c.id]} />
+      </Section>
+
+      {/* The labels, as a numbered grid */}
+      <Section>
+        <SectionHead eyebrow="Moment labels" title="How it tags each clip" intro="Every clip in your shortlist carries one of these, so you see what kind of moment it is before you press play. You can filter your clips by label." />
+        <ol className="mt-14 grid gap-px overflow-hidden rounded-[24px] border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
+          {c.labels.map((l, i) => (
+            <li key={l} className="flex flex-col justify-between gap-8 bg-surface p-6">
+              <span className="hud text-signal">{String(i + 1).padStart(2, "0")}</span>
+              <span className="text-[clamp(22px,2vw,28px)] leading-tight tracking-[-0.02em]">{l}</span>
+            </li>
+          ))}
+          <li className="flex flex-col justify-between gap-8 bg-surface-2 p-6">
+            <span className="hud text-faint">Score</span>
+            <span className="text-[15px] leading-snug text-muted">Each label comes with a score from 0 to 100 and the reason for the pick</span>
+          </li>
+        </ol>
       </Section>
 
       {example && (
         <Section>
-          <SectionHead eyebrow="Example" title="What a shortlist looks like" />
-          <ul className="mt-12 grid gap-3 lg:grid-cols-3">
-            {example.moments.map((m) => (
-              <li key={m.title} className="rounded-[24px] border border-line bg-surface p-6">
-                <p className="hud text-muted">{m.label}</p>
-                <p className="mt-4 text-[19px] leading-snug tracking-[-0.01em]">{m.title}</p>
-                <p className="mt-2 text-[14px] text-muted">{m.reason}</p>
+          <SectionHead eyebrow="Example" title="What a shortlist looks like" intro={`${example.video}, ${example.length} long. Best moment first.`} />
+          <ol className="mt-12 grid gap-3 lg:grid-cols-3">
+            {example.moments.map((m, i) => (
+              <li key={m.title} className="flex flex-col rounded-[24px] border border-line bg-surface p-6">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="hud text-muted">
+                    <span className="text-signal">{String(i + 1).padStart(2, "0")}</span> / {m.label}
+                  </span>
+                  <span className={`tc text-[22px] leading-none ${m.score >= 90 ? "text-ready" : "text-signal"}`}>
+                    {m.score}
+                    <span className="text-[12px] text-faint">/100</span>
+                  </span>
+                </div>
+                <p className="mt-6 flex-1 text-[20px] leading-snug tracking-[-0.01em]">{m.title}</p>
+                <p className="mt-3 text-[14px] leading-relaxed text-muted">{m.reason}</p>
               </li>
             ))}
-          </ul>
+          </ol>
           <p className="mt-4 text-[13px] text-faint">Illustrative example.</p>
         </Section>
       )}
 
       {c.rightsSensitive && (
         <Section>
-          <div className="rounded-[24px] border border-draft/40 bg-draft/10 p-8">
-            <p className="text-[22px] tracking-[-0.01em]">Clip only what you have the rights to</p>
-            <p className="mt-2 max-w-3xl text-[16px] leading-relaxed text-muted">
+          <div className="grid gap-6 rounded-[24px] border border-draft/40 bg-draft/10 p-8 lg:grid-cols-[1fr_1.6fr] lg:items-center lg:p-10">
+            <p className="text-[clamp(24px,2.4vw,32px)] leading-tight tracking-[-0.02em]">Clip only what you have the rights to</p>
+            <p className="text-[16px] leading-relaxed text-muted">
               {c.id === "sports"
                 ? "Match broadcasts are owned by leagues and broadcasters and are removed quickly when posted without permission. Use this engine on footage you own or are licensed to use, fan streams, shows and podcasts."
                 : "Films and series are protected by their studios. Use this engine on your own productions, or on reviews, recaps and reactions that follow each network's rules."}
@@ -238,14 +309,24 @@ function EngineView({ c }: { c: Category }) {
         </Section>
       )}
 
+      {/* The other engines, as a short index */}
       <Section>
-        <div className="flex flex-wrap gap-x-10 gap-y-3">
-          {CATEGORIES.filter((o) => o.id !== c.id).map((o) => (
-            <a key={o.id} href={`/engines/${o.slug}`} className="text-[clamp(24px,2.8vw,40px)] leading-none tracking-[-0.03em] transition-colors hover:text-signal">
-              {o.engine}
-            </a>
+        <SectionHead eyebrow="Other engines" title="Pick the one that fits the video" />
+        <ul className="mt-12 border-t border-line">
+          {others.map((o) => (
+            <li key={o.id}>
+              <a href={`/engines/${o.slug}`} className="group grid items-center gap-3 border-b border-line py-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_auto] sm:gap-8">
+                <span className="text-[clamp(26px,2.6vw,36px)] leading-none tracking-[-0.03em] transition-colors group-hover:text-signal">{o.engine}</span>
+                <span className="text-[16px] text-muted">{o.looksFor}</span>
+                <span className="hidden size-10 items-center justify-center rounded-full border border-line transition-[background-color,border-color,color,transform] duration-300 group-hover:translate-x-1 group-hover:border-signal group-hover:bg-signal group-hover:text-on-signal sm:flex" aria-hidden="true">
+                  <svg viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 8h10M9 4l4 4-4 4" />
+                  </svg>
+                </span>
+              </a>
+            </li>
           ))}
-        </div>
+        </ul>
       </Section>
       <FinalCta />
     </>
