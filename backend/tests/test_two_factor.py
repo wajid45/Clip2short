@@ -25,7 +25,7 @@ def code_at(secret: str, steps_ahead: int = 0) -> str:
 def enable(c: TestClient) -> tuple[str, list[str]]:
     assert c.post("/api/account/2fa/start", json={"password": "wrong password"}).json()["code"] == "wrong_password"
     start = c.post("/api/account/2fa/start", json={"password": PW}).json()
-    assert start["otpauthUrl"].startswith("otpauth://totp/Shortlark:")
+    assert start["otpauthUrl"].startswith("otpauth://totp/Clip2Short:")
     assert c.post("/api/account/2fa/confirm", json={"code": "000000"}).json()["code"] == "bad_code"
     r = c.post("/api/account/2fa/confirm", json={"code": code_at(start["secret"])})
     assert r.status_code == 200, r.text
@@ -137,3 +137,13 @@ def test_signup_says_when_the_account_exists():
     ratelimit._buckets.clear()
     r = TestClient(app).post("/api/auth/signup", json={"name": "Again", "email": "tfa-exists@test.dev", "password": PW})
     assert r.status_code == 409 and r.json()["code"] == "account_exists"
+
+
+def test_changing_email_needs_the_code_when_two_factor_is_on():
+    c = signup("tfa-email@test.dev")
+    secret, backup = enable(c)
+    move = {"name": "Two Factor", "email": "tfa-email-new@test.dev", "currentPassword": PW}
+    assert c.patch("/api/account", json=move).json()["code"] == "code_required"
+    assert c.patch("/api/account", json={**move, "code": "000000"}).json()["code"] == "bad_code"
+    r = c.patch("/api/account", json={**move, "code": code_at(secret, 1)})
+    assert r.status_code == 200 and r.json()["email"] == "tfa-email-new@test.dev"

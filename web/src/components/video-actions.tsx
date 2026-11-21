@@ -3,6 +3,7 @@ import { useState } from "react";
 import { apiFetch } from "@/lib/client";
 import { Button, Notice } from "./ui";
 import { IconPlus, IconSpark, IconTrash } from "@shortlark/shared/components/icons";
+import { Select } from "@shortlark/shared/components/select";
 
 export function AnalyzeButton({
   videoId,
@@ -22,18 +23,20 @@ export function AnalyzeButton({
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-1.5">
-        <select
-          aria-label="What the AI looks for"
+        <Select
+          ariaLabel="What the AI looks for"
+          size="sm"
+          className="w-40"
           value={focus}
-          onChange={(e) => setFocus(e.target.value)}
+          onChange={setFocus}
           disabled={disabled || loading}
-          className="h-8 rounded-lg border border-line bg-surface px-2 text-[13px] text-text focus:border-signal focus:outline-none"
-        >
-          <option value="auto">Best moments</option>
-          <option value="events">Main events</option>
-          <option value="funny">Funniest</option>
-          <option value="insights">Insights</option>
-        </select>
+          options={[
+            { value: "auto", label: "Best moments" },
+            { value: "events", label: "Main events" },
+            { value: "funny", label: "Funniest" },
+            { value: "insights", label: "Insights" },
+          ]}
+        />
         <Button
           size="sm"
           loading={loading}

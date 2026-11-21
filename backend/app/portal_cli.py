@@ -10,10 +10,9 @@ from __future__ import annotations
 
 import sys
 
-from sqlalchemy import select
-
 from .db import SessionLocal
 from .models import AdminAudit, AdminTotp, User
+from .odm import select
 
 
 def reset_2fa(email: str) -> int:

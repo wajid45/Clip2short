@@ -14,12 +14,9 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import or_, select, update
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
-
 from .db import utcnow
 from .models import CreditGrant, CreditTransaction, User
+from .odm import IntegrityError, Session, or_, select, update
 from .plans import TRIAL
 
 

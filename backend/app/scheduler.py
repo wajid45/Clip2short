@@ -9,7 +9,7 @@ import time
 from .config import settings
 from .social.publisher import run_publisher
 
-log = logging.getLogger("shortlark.scheduler")
+log = logging.getLogger("clip2short.scheduler")
 _stop = threading.Event()
 _started = False
 

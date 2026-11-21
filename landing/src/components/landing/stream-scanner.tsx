@@ -103,7 +103,7 @@ export function StreamScanner() {
       className="relative rounded-3xl border border-line bg-surface p-5 shadow-[0_40px_120px_-60px_rgba(0,0,0,0.5)] sm:p-7"
       style={{ ["--p" as string]: "0" }}
       role="img"
-      aria-label="Shortlark scanning a 6-hour stream and scoring the moments it finds"
+      aria-label="Clip2Short scanning a 6-hour stream and scoring the moments it finds"
     >
       {/* header */}
       <div className="flex flex-wrap items-center justify-between gap-4">

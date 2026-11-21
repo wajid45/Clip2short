@@ -3,15 +3,12 @@
 from __future__ import annotations
 
 import json
-from datetime import timedelta
-
-from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 from ..config import settings
 from ..db import utcnow
 from ..integrations import load_integrations
 from ..models import SocialAccount
+from ..odm import Session, select
 from ..security import decrypt, encrypt
 from .base import AccountContext, ConnectedAccount, Provider
 from .meta import Facebook, Instagram
@@ -79,7 +76,7 @@ def account_context(s: Session, a: SocialAccount) -> AccountContext:
     load_integrations()
     ctx = _to_context(a)
     provider = get_provider(a.platform)
-    if provider and a.tokenExpiresAt and a.tokenExpiresAt - utcnow() < timedelta(minutes=10):
+    if provider and a.tokenExpiresAt and a.tokenExpiresAt - utcnow() < provider.refresh_ahead:
         try:
             r = provider.refresh(ctx)
             if r:

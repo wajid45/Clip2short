@@ -89,7 +89,7 @@ export function ShortCard({ palette, handle, caption, hot, score, time, likes, c
       {/* footer */}
       <div className="absolute inset-x-[6%] bottom-[6%] text-white">
         <p className="text-[11px] font-semibold">@{handle}</p>
-        <p className="mt-0.5 line-clamp-1 text-[10px] text-white/75">clipped with shortlark</p>
+        <p className="mt-0.5 line-clamp-1 text-[10px] text-white/75">clipped with clip2short</p>
         <div className="mt-2 h-[3px] overflow-hidden rounded-full bg-white/25">
           <div className="h-full origin-left animate-progress rounded-full bg-white" style={{ animationDelay: progressDelay }} />
         </div>

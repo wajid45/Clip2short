@@ -13,7 +13,7 @@ import httpx
 
 from .config import settings
 
-log = logging.getLogger("shortlark.email")
+log = logging.getLogger("clip2short.email")
 
 
 class EmailError(RuntimeError):
@@ -49,25 +49,25 @@ def _layout(title: str, body_html: str) -> str:
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border:1px solid #e6e8ec;border-radius:14px">
 <tr><td style="padding:32px">
-<p style="margin:0 0 24px;font-size:18px;font-weight:600;letter-spacing:-0.02em">shortlark</p>
+<p style="margin:0 0 24px;font-size:18px;font-weight:600;letter-spacing:-0.02em">clip2short</p>
 <h1 style="margin:0 0 12px;font-size:20px;letter-spacing:-0.02em">{html.escape(title)}</h1>
 {body_html}
 </td></tr></table>
-<p style="margin:16px 0 0;font-size:12px;color:#8a909b">Shortlark · You received this because of activity on your account.</p>
+<p style="margin:16px 0 0;font-size:12px;color:#8a909b">Clip2Short · You received this because of activity on your account.</p>
 </td></tr></table></body></html>"""
 
 
 def send_password_reset(to: str, name: str | None, link: str, minutes: int) -> None:
     hello = f"Hi {name}," if name else "Hi,"
     text = (
-        f"{hello}\n\nSomeone asked to reset the password for your Shortlark account. "
+        f"{hello}\n\nSomeone asked to reset the password for your Clip2Short account. "
         f"Open this link within {minutes} minutes to choose a new password:\n\n{link}\n\n"
         "If you didn't ask for this, ignore this email; your password stays the same."
     )
-    body = f"""<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3d4048">{html.escape(hello)} someone asked to reset the password for your Shortlark account. The link works for {minutes} minutes.</p>
+    body = f"""<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3d4048">{html.escape(hello)} someone asked to reset the password for your Clip2Short account. The link works for {minutes} minutes.</p>
 <p style="margin:0 0 24px"><a href="{html.escape(link)}" style="display:inline-block;background:#d9480f;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 20px;border-radius:10px">Choose a new password</a></p>
 <p style="margin:0;font-size:13px;line-height:1.6;color:#555b66">If you didn't ask for this, ignore this email; your password stays the same.</p>"""
-    send_email(to, "Reset your Shortlark password", _layout("Reset your password", body), text)
+    send_email(to, "Reset your Clip2Short password", _layout("Reset your password", body), text)
 
 
 def _button(link: str, label: str) -> str:
@@ -81,21 +81,32 @@ def _para(text: str) -> str:
 def send_welcome(to: str, name: str | None, app_link: str, trial_credits: int) -> None:
     hello = f"Hi {name}," if name else "Hi,"
     lines = [
-        f"{hello} welcome to Shortlark. You have {trial_credits} free credits: 1 credit is 1 minute of video.",
+        f"{hello} welcome to Clip2Short. You have {trial_credits} free credits: 1 credit is 1 minute of video.",
         "Paste a link to a stream, podcast or talk, pick its category, and the AI ranks every moment worth clipping.",
     ]
     text = "\n\n".join(lines) + f"\n\nStart here: {app_link}"
     body = "".join(_para(line) for line in lines) + _button(app_link, "Find your first clips")
-    send_email(to, "Welcome to Shortlark", _layout("Welcome to Shortlark", body), text)
+    send_email(to, "Welcome to Clip2Short", _layout("Welcome to Clip2Short", body), text)
 
 
 def send_clips_ready(to: str, name: str | None, video_title: str, count: int, best: int | None, link: str) -> None:
     hello = f"Hi {name}," if name else "Hi,"
     best_line = f" The best one scores {best}." if best is not None else ""
-    line = f"{hello} Shortlark found {count} moment{'s' if count != 1 else ''} in “{video_title}”.{best_line}"
+    line = f"{hello} Clip2Short found {count} moment{'s' if count != 1 else ''} in “{video_title}”.{best_line}"
     text = f"{line}\n\nOpen them: {link}"
     body = _para(line) + _button(link, "Open your moments")
     send_email(to, f"{count} moment{'s' if count != 1 else ''} ready in “{video_title[:60]}”", _layout("Your clips are ready", body), text)
+
+
+def send_admin_code(to: str, name: str | None, code: str, minutes: int) -> None:
+    """The one-time code that proves an admin owns their inbox before an authenticator is set up."""
+    hello = f"Hi {name}," if name else "Hi,"
+    advice = "If you didn't just sign in to the Clip2Short admin console, someone has your password: change it now."
+    text = f"{hello}\n\nYour Clip2Short admin setup code is {code}. It works for {minutes} minutes.\n\n{advice}"
+    body = _para(f"{hello} enter this code to finish setting up admin sign-in. It works for {minutes} minutes.") + (
+        f'<p style="margin:0 0 24px;font-size:32px;font-weight:600;letter-spacing:0.2em;font-family:ui-monospace,Menlo,monospace">{code}</p>'
+    ) + _para(advice)
+    send_email(to, "Your Clip2Short admin setup code", _layout("Admin setup code", body), text)
 
 
 def send_security_notice(to: str, name: str | None, title: str, what: str, help_link: str) -> None:
@@ -104,7 +115,7 @@ def send_security_notice(to: str, name: str | None, title: str, what: str, help_
     advice = "If this was you, there's nothing to do. If it wasn't, reset your password straight away and contact us."
     text = f"{hello}\n\n{what}\n\n{advice}\n\n{help_link}"
     body = _para(f"{hello} {what}") + _button(help_link, "Secure my account") + _para(advice)
-    send_email(to, f"Shortlark: {title.lower()}", _layout(title, body), text)
+    send_email(to, f"Clip2Short: {title.lower()}", _layout(title, body), text)
 
 
 def send_low_credits(to: str, name: str | None, balance: int, billing_link: str) -> None:
@@ -112,4 +123,4 @@ def send_low_credits(to: str, name: str | None, balance: int, billing_link: str)
     line = f"{hello} you have {balance} credit{'s' if balance != 1 else ''} left, about {balance} minute{'s' if balance != 1 else ''} of video. Top up or pick a plan so your next stream doesn't wait."
     text = f"{line}\n\nBilling: {billing_link}"
     body = _para(line) + _button(billing_link, "Open Billing")
-    send_email(to, "Your Shortlark credits are running low", _layout("Credits running low", body), text)
+    send_email(to, "Your Clip2Short credits are running low", _layout("Credits running low", body), text)

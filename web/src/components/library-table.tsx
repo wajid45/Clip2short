@@ -2,11 +2,12 @@ import clsx from "clsx";
 import { Link } from "@/lib/nav";
 import { usePathname, useRouter, useSearchParams } from "@/lib/nav";
 import { useEffect, useState, useTransition } from "react";
-import { apiFetch } from "@/lib/client";
+import { apiFetch, apiUrl } from "@/lib/client";
 import { formatDuration, formatTimecode } from "@shortlark/shared/time";
 import { Button, inputClass } from "./ui";
 import { CATEGORY_LABEL, PLATFORM_LABEL, STATUS_META, ScoreBadge, StatusBadge } from "./badges";
 import { IconDownload, IconSearch, IconTrash } from "@shortlark/shared/components/icons";
+import { Select } from "@shortlark/shared/components/select";
 
 export interface LibraryRow {
   id: string;
@@ -22,7 +23,6 @@ export interface LibraryRow {
   posts: number;
 }
 
-const selectClass = "h-9 rounded-lg border border-line bg-surface px-2.5 text-sm text-text focus:border-signal focus:outline-none";
 
 export function LibraryTable({ rows, total }: { rows: LibraryRow[]; total: number }) {
   const router = useRouter();
@@ -79,11 +79,36 @@ export function LibraryTable({ rows, total }: { rows: LibraryRow[]; total: numbe
     }
   }
 
+  const [zipFormat, setZipFormat] = useState<"original" | "vertical">("original");
+  const [zipping, setZipping] = useState(false);
+
+  /** The selected clips as one ZIP of MP4s. Clips from YouTube or Vimeo are listed in skipped.txt. */
+  async function downloadZip() {
+    setZipping(true);
+    try {
+      const res = await fetch(apiUrl(`/api/clips/zip?ids=${[...selected].join(",")}&format=${zipFormat}`), { credentials: "include" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ?? "The download failed. Please try again.");
+      }
+      const blob = await res.blob();
+      const name = /filename="?([^";]+)/.exec(res.headers.get("content-disposition") ?? "")?.[1] ?? "clip2short-clips.zip";
+      const url = URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement("a"), { href: url, download: name });
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch (e) {
+      alert((e as Error).message);
+    } finally {
+      setZipping(false);
+    }
+  }
+
   function exportHref(format: "csv" | "json") {
     const p = new URLSearchParams(params.toString());
     p.set("format", format);
     if (selected.size) p.set("ids", [...selected].join(","));
-    return `/api/clips/export?${p.toString()}`;
+    return apiUrl(`/api/clips/export?${p.toString()}`);
   }
 
   return (
@@ -101,37 +126,58 @@ export function LibraryTable({ rows, total }: { rows: LibraryRow[]; total: numbe
           />
         </div>
         <div className="flex flex-wrap gap-2">
-          <select aria-label="Status" className={selectClass} value={params.get("status") ?? ""} onChange={(e) => setParam("status", e.target.value)}>
-            <option value="">All statuses</option>
-            {Object.entries(STATUS_META).map(([k, m]) => (
-              <option key={k} value={k}>{m.label}</option>
-            ))}
-          </select>
-          <select aria-label="Source" className={selectClass} value={params.get("source") ?? ""} onChange={(e) => setParam("source", e.target.value)}>
-            <option value="">All sources</option>
-            <option value="youtube">YouTube</option>
-            <option value="vimeo">Vimeo</option>
-            <option value="direct">File link</option>
-          </select>
-          <select aria-label="Category" className={selectClass} value={params.get("category") ?? ""} onChange={(e) => setParam("category", e.target.value)}>
-            <option value="">All categories</option>
-            {Object.entries(CATEGORY_LABEL).map(([k, v]) => (
-              <option key={k} value={k}>{v}</option>
-            ))}
-          </select>
-          <select aria-label="Minimum score" className={selectClass} value={params.get("minScore") ?? ""} onChange={(e) => setParam("minScore", e.target.value)}>
-            <option value="">Any score</option>
-            <option value="85">85+</option>
-            <option value="70">70+</option>
-            <option value="50">50+</option>
-          </select>
-          <select aria-label="Sort" className={selectClass} value={params.get("sort") ?? "score"} onChange={(e) => setParam("sort", e.target.value === "score" ? "" : e.target.value)}>
-            <option value="score">Highest score</option>
-            <option value="newest">Newest</option>
-            <option value="oldest">Oldest</option>
-            <option value="title">Title A to Z</option>
-            <option value="start">Video order</option>
-          </select>
+          <Select
+            ariaLabel="Status"
+            size="sm"
+            value={params.get("status") ?? ""}
+            onChange={(v) => setParam("status", v)}
+            options={[{ value: "", label: "All statuses" }, ...Object.entries(STATUS_META).map(([value, m]) => ({ value, label: m.label }))]}
+          />
+          <Select
+            ariaLabel="Source"
+            size="sm"
+            value={params.get("source") ?? ""}
+            onChange={(v) => setParam("source", v)}
+            options={[
+              { value: "", label: "All sources" },
+              { value: "youtube", label: "YouTube" },
+              { value: "vimeo", label: "Vimeo" },
+              { value: "direct", label: "File link" },
+            ]}
+          />
+          <Select
+            ariaLabel="Category"
+            size="sm"
+            value={params.get("category") ?? ""}
+            onChange={(v) => setParam("category", v)}
+            options={[{ value: "", label: "All categories" }, ...Object.entries(CATEGORY_LABEL).map(([value, label]) => ({ value, label }))]}
+          />
+          <Select
+            ariaLabel="Minimum score"
+            size="sm"
+            value={params.get("minScore") ?? ""}
+            onChange={(v) => setParam("minScore", v)}
+            options={[
+              { value: "", label: "Any score" },
+              { value: "85", label: "85+" },
+              { value: "70", label: "70+" },
+              { value: "50", label: "50+" },
+            ]}
+          />
+          <Select
+            ariaLabel="Sort"
+            size="sm"
+            menuClassName="right-0 left-auto"
+            value={params.get("sort") ?? "score"}
+            onChange={(v) => setParam("sort", v === "score" ? "" : v)}
+            options={[
+              { value: "score", label: "Highest score" },
+              { value: "newest", label: "Newest" },
+              { value: "oldest", label: "Oldest" },
+              { value: "title", label: "Title A to Z" },
+              { value: "start", label: "Video order" },
+            ]}
+          />
         </div>
       </div>
 
@@ -150,34 +196,46 @@ export function LibraryTable({ rows, total }: { rows: LibraryRow[]; total: numbe
         <div className="flex flex-wrap items-center gap-2">
           {selected.size > 0 && (
             <>
-              <select
-                aria-label="Set status for selected"
-                className={selectClass}
+              <Select
+                ariaLabel="Set status for selected"
+                size="sm"
                 value=""
                 disabled={busy}
-                onChange={(e) => e.target.value && bulk("status", e.target.value)}
-              >
-                <option value="">Set status…</option>
-                {Object.entries(STATUS_META).map(([k, m]) => (
-                  <option key={k} value={k}>{m.label}</option>
-                ))}
-              </select>
+                onChange={(v) => v && bulk("status", v)}
+                options={[{ value: "", label: "Set status…" }, ...Object.entries(STATUS_META).map(([value, m]) => ({ value, label: m.label }))]}
+              />
+              <div className="flex items-center gap-1.5">
+                <Select
+                  ariaLabel="Video shape for the download"
+                  size="sm"
+                  className="w-36"
+                  value={zipFormat}
+                  onChange={(v) => setZipFormat(v as "original" | "vertical")}
+                  options={[
+                    { value: "original", label: "Original shape" },
+                    { value: "vertical", label: "Vertical 9:16" },
+                  ]}
+                />
+                <Button size="sm" onClick={() => void downloadZip()} loading={zipping} disabled={selected.size > 20} title={selected.size > 20 ? "Download up to 20 clips at a time" : undefined}>
+                  <IconDownload size={14} /> Download ZIP
+                </Button>
+              </div>
               <Button size="sm" variant="danger" onClick={() => bulk("delete")} loading={busy}>
                 <IconTrash size={14} /> Delete
               </Button>
             </>
           )}
-          <a href={exportHref("csv")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-line px-3 text-[13px] text-text hover:border-line-strong">
+          <a href={exportHref("csv")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-line bg-surface px-3 text-[13px] text-text hover:border-line-strong">
             <IconDownload size={14} /> {selected.size ? "Export selected" : "Export"} CSV
           </a>
-          <a href={exportHref("json")} className="inline-flex h-8 items-center rounded-lg px-2 text-[13px] text-muted hover:text-text">
+          <a href={exportHref("json")} className="inline-flex h-8 items-center rounded-lg px-2 text-[13px] text-text hover:bg-surface-2">
             JSON
           </a>
         </div>
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-xl border border-line">
+      <div className="overflow-x-auto rounded-xl border border-line bg-surface">
         <table className="w-full min-w-[820px] text-sm">
           <thead>
             <tr className="border-b border-line bg-surface text-left text-xs text-muted">

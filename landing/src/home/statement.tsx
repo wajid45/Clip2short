@@ -19,11 +19,11 @@ export function Statement() {
     <section className="relative">
       <div className="mx-auto max-w-[1400px] px-4 pt-28 pb-20 text-center sm:px-8 sm:pt-40">
         <p className="hud text-muted">
-          <span className="text-signal">/</span> Why Shortlark
+          <span className="text-signal">/</span> Why Clip2Short
         </p>
         <SplitRise as="h2" className="display mt-6 text-[clamp(47px,8.55vw,137px)]" parts={["Find the\nmoments"]} />
         <p className="mx-auto mt-10 max-w-2xl text-[clamp(16px,1.44vw,19px)] leading-relaxed text-muted">
-          A six-hour stream hides a dozen great clips. Scrubbing for them takes longer than the stream itself. Shortlark reads the whole thing, ranks
+          A six-hour stream hides a dozen great clips. Scrubbing for them takes longer than the stream itself. Clip2Short reads the whole thing, ranks
           every moment worth posting and tells you exactly why.
         </p>
         <a href="#how" className="ulink mt-10 inline-flex">
@@ -32,7 +32,7 @@ export function Statement() {
       </div>
 
       {/* Facts strip: number over a plain label, no dividers */}
-      <div className="bg-surface-2/60" aria-label="Shortlark at a glance">
+      <div className="bg-surface-2/60" aria-label="Clip2Short at a glance">
         <div className="marquee-mask overflow-hidden">
           <ul className="marquee-track flex w-max">
             {[...FACTS, ...FACTS].map(([big, small, network], i) => (

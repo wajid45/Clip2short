@@ -17,7 +17,7 @@ export function Showcase() {
   });
 
   return (
-    <section id="reel" ref={ref} className="showcase relative scroll-mt-0 md:h-[190vh]" aria-label="Shortlark scanning a stream">
+    <section id="reel" ref={ref} className="showcase relative scroll-mt-0 md:h-[190vh]" aria-label="Clip2Short scanning a stream">
       <div className="md:sticky md:top-0 md:flex md:h-[100svh] md:items-center md:justify-center md:overflow-hidden">
         <div className="showcase-card relative mx-4 overflow-hidden bg-[#07080c] text-white md:mx-0">
           <div className="showcase-grid pointer-events-none absolute inset-0" aria-hidden="true" />

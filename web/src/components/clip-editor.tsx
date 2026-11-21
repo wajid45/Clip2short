@@ -2,7 +2,7 @@ import clsx from "clsx";
 import { Link } from "@/lib/nav";
 import { useRouter } from "@/lib/nav";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { apiFetch } from "@/lib/client";
+import { apiFetch, apiUrl } from "@/lib/client";
 import { formatDuration, formatTimecode, parseTimecode } from "@shortlark/shared/time";
 import { timestampUrl } from "@shortlark/shared/video-source";
 import { Player, type PlayerHandle } from "./player";
@@ -13,6 +13,7 @@ import { PostPanel, type PanelAccount, type PanelPost } from "./post-panel";
 import { AiSuggestions, type ClipField, type PostingSuggestion } from "./ai-suggestions";
 import { DownloadClip } from "./download-clip";
 import { IconArrowLeft, IconArrowRight, IconPause, IconPlay, IconStepBack, IconStepFwd, IconTrash } from "@shortlark/shared/components/icons";
+import { Select } from "@shortlark/shared/components/select";
 
 export interface EditorClip {
   id: string;
@@ -165,7 +166,7 @@ export function ClipEditor({
     (d: number) => {
       setDuration(d);
       if (!video.durationSec || Math.abs(video.durationSec - d) > 2)
-        void fetch(`/api/videos/${video.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ durationSec: d }) });
+        void fetch(apiUrl(`/api/videos/${video.id}`), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ durationSec: d }), credentials: "include" });
     },
     [video.durationSec, video.id],
   );
@@ -413,19 +414,13 @@ export function ClipEditor({
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
                 <Label htmlFor="category">Category</Label>
-                <select
+                <Select
                   id="category"
+                  ariaLabel="Category"
                   value={f.category ?? ""}
-                  onChange={(e) => set("category", e.target.value || null)}
-                  className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-text focus:border-signal focus:outline-none"
-                >
-                  <option value="">None</option>
-                  {Object.entries(CATEGORY_LABEL).map(([k, v]) => (
-                    <option key={k} value={k}>
-                      {v}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => set("category", v || null)}
+                  options={[{ value: "", label: "None" }, ...Object.entries(CATEGORY_LABEL).map(([value, label]) => ({ value, label }))]}
+                />
               </div>
               <div>
                 <Label htmlFor="hashtags" hint="space separated">Hashtags</Label>

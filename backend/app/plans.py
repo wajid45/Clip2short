@@ -38,7 +38,7 @@ def has_active_subscription(u: HasPlan) -> bool:
     return u.subscriptionStatus in ACTIVE_STATUSES and get_plan(u.plan) is not None
 
 
-def limits_for(u: HasPlan) -> dict[str, int]:
+def limits_for(u: HasPlan) -> dict[str, Any]:
     plan = get_plan(u.plan)
     return plan["limits"] if has_active_subscription(u) and plan else BASE_LIMITS
 

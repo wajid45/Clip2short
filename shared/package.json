@@ -3,7 +3,7 @@
   "version": "3.0.0",
   "private": true,
   "type": "module",
-  "description": "Code shared by the server, web app and landing page: pricing, time helpers, brand components and design tokens.",
+  "description": "Code shared by the server, web app and landing page: pricing, time helpers, brand components and design tokens and the hero aurora.",
   "exports": {
     "./plans": "./src/plans.ts",
     "./categories": "./src/categories.ts",
@@ -14,12 +14,17 @@
     "./styles.css": "./src/styles.css",
     "./components/*": "./src/components/*.tsx",
     "./api-types": "./src/api-types.ts",
-    "./pricing.json": "./src/pricing.json"
+    "./pricing.json": "./src/pricing.json",
+    "./three/*": "./src/three/*.ts"
   },
   "dependencies": {
-    "clsx": "^2.1.1"
+    "clsx": "^2.1.1",
+    "three": "^0.187.0"
   },
   "peerDependencies": {
     "react": "^19"
+  },
+  "devDependencies": {
+    "@types/three": "^0.187.0"
   }
 }

@@ -6,11 +6,9 @@ from datetime import timedelta
 from typing import Literal
 
 from fastapi import Depends, Request
-from sqlalchemy import select, update
-from sqlalchemy.orm import Session
 
 from .. import notify
-from ..auth import require_admin, require_user
+from ..auth import require_user
 from ..background import after
 from ..billing import stripe_client
 from ..config import settings
@@ -18,13 +16,14 @@ from ..db import get_db, utcnow
 from ..email import send_password_reset
 from ..http import HttpError, json_response, validate
 from ..models import ContactMessage, PasswordReset, User
+from ..odm import Session, select, update
 from ..passwords import MAX_LENGTH, password_problem
 from ..ratelimit import rate_limit, rate_limit_account
 from ..security import clear_session, hash_password, random_token, set_session, verify_password
 from .common import JsonBody, Model, api_router, email, text
-from .two_factor import enabled_2fa
+from .two_factor import check_code, enabled_2fa
 
-log = logging.getLogger("shortlark.account")
+log = logging.getLogger("clip2short.account")
 router = api_router()
 
 RESET_MINUTES = 60
@@ -96,9 +95,14 @@ def reset_password(request: Request, body: JsonBody, s: Session = Depends(get_db
         raise HttpError(400, "This reset link has expired or was already used. Ask for a new one.", "invalid_token")
     if problem := password_problem(b.password, email=user.email, name=user.name):
         raise HttpError(400, problem, "weak_password")
+    now = utcnow()
+    # Claim the link first: only one request can turn usedAt from empty to set.
+    claimed = s.execute(update(PasswordReset).where(PasswordReset.id == row.id, PasswordReset.usedAt.is_(None)).values(usedAt=now))
+    if claimed.rowcount != 1:
+        s.rollback()
+        raise HttpError(400, "This reset link has expired or was already used. Ask for a new one.", "invalid_token")
     user.passwordHash = hash_password(b.password)
     user.sessionVersion += 1  # sign out every other session
-    now = utcnow()
     s.execute(update(PasswordReset).where(PasswordReset.userId == user.id, PasswordReset.usedAt.is_(None)).values(usedAt=now))
     s.commit()
     after(notify.password_changed, user.id)
@@ -117,6 +121,7 @@ class Profile(Model):
     name: text(1, 80, min_msg="Enter your name")  # type: ignore[valid-type]
     email: email("Enter a valid email")  # type: ignore[valid-type]
     currentPassword: str | None = None  # required when the email changes
+    code: str | None = None  # also required when two-factor sign-in is on
 
 
 @router.patch("/account")
@@ -127,6 +132,12 @@ def update_profile(request: Request, body: JsonBody, user: User = Depends(requir
         rate_limit(request, f"email-change:{user.id}", 10, 15 * 60)
         if not verify_password(b.currentPassword or "", user.passwordHash):
             raise HttpError(400, "Enter your current password to change your email.", "password_required")
+        if two_factor := enabled_2fa(s, user.id):
+            if not b.code:
+                raise HttpError(400, "Enter a code from your authenticator app to change your email.", "code_required")
+            if not check_code(two_factor, b.code):
+                s.commit()  # keep the replay guard
+                raise HttpError(400, "That code doesn't match. Use the newest code from your authenticator app, or a backup code.", "bad_code")
         if s.scalar(select(User.id).where(User.email == b.email, User.id != user.id)):
             raise HttpError(409, "Another account already uses that email.")
         user.email = b.email
@@ -208,16 +219,3 @@ def contact(request: Request, body: JsonBody, s: Session = Depends(get_db)):
     s.commit()
     return json_response({"ok": True})
 
-
-class MessageUpdate(Model):
-    handled: bool
-
-
-@router.patch("/admin/messages/{message_id}")
-def mark_message(message_id: str, body: JsonBody, _: User = Depends(require_admin), s: Session = Depends(get_db)):
-    m = s.get(ContactMessage, message_id)
-    if not m:
-        raise HttpError(404, "Message not found.")
-    m.handled = validate(MessageUpdate, body).handled
-    s.commit()
-    return json_response({"ok": True})

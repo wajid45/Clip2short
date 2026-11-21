@@ -1,5 +1,6 @@
-import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
-import { AdminLayout, AppLayout } from "./pages/app-layout";
+import type { ReactElement } from "react";
+import { createBrowserRouter, Navigate, RouterProvider, useLocation } from "react-router";
+import { AppLayout } from "./pages/app-layout";
 import { AuthLayout, LoginPage, OAuthCompletePage, SignupPage } from "./pages/auth";
 import { VideoPage, VideosPage } from "./pages/videos";
 import { ClipPage, LibraryPage, MomentsPage } from "./pages/clips";
@@ -7,9 +8,27 @@ import { QueuePage } from "./pages/queue";
 import { AnalyticsPage } from "./pages/analytics";
 import { AccountsPage } from "./pages/accounts";
 import { BillingPage } from "./pages/billing";
-import { IntegrationsPage, LeadsPage } from "./pages/admin";
-import { ForgotPasswordPage, HelpPage, MessagesPage, ResetPasswordPage, SettingsPage } from "./pages/account";
+import { OverviewPage } from "./pages/overview";
+import { ForgotPasswordPage, HelpPage, ResetPasswordPage, SettingsPage } from "./pages/account";
 import { NotFound } from "./lib/page-data";
+import { PAGE_TOKENS, toPublic } from "./lib/routes";
+
+/** Sends a readable address (/app/billing?x) to its token form, keeping the query and hash. */
+function ToTokenPath() {
+  const { pathname, search, hash } = useLocation();
+  return <Navigate to={`${toPublic(pathname)}${search}${hash}`} replace />;
+}
+
+function pages(list: [string, ReactElement][]) {
+  return list.flatMap(([path, element]) => {
+    const [name, ...rest] = path.split("/");
+    const tail = rest.length ? `/${rest.join("/")}` : "";
+    return [
+      { path: `${PAGE_TOKENS[name]}${tail}`, element },
+      { path, element: <ToTokenPath /> },
+    ];
+  });
+}
 
 const router = createBrowserRouter([
   { path: "/", element: <Navigate to="/app" replace /> },
@@ -29,26 +48,21 @@ const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       { index: true, element: <VideosPage /> },
-      { path: "videos/:id", element: <VideoPage /> },
-      { path: "clips/:id", element: <ClipPage /> },
-      { path: "moments", element: <MomentsPage /> },
-      { path: "library", element: <LibraryPage /> },
-      { path: "queue", element: <QueuePage /> },
-      { path: "analytics", element: <AnalyticsPage /> },
-      { path: "accounts", element: <AccountsPage /> },
-      { path: "billing", element: <BillingPage /> },
-      { path: "settings", element: <SettingsPage /> },
-      { path: "help", element: <HelpPage /> },
+      // Each page is served at its opaque token; the readable name redirects to it.
+      ...pages([
+        ["overview", <OverviewPage />],
+        ["videos/:id", <VideoPage />],
+        ["clips/:id", <ClipPage />],
+        ["moments", <MomentsPage />],
+        ["library", <LibraryPage />],
+        ["queue", <QueuePage />],
+        ["analytics", <AnalyticsPage />],
+        ["accounts", <AccountsPage />],
+        ["billing", <BillingPage />],
+        ["settings", <SettingsPage />],
+        ["help", <HelpPage />],
+      ]),
       { path: "*", element: <NotFound /> },
-    ],
-  },
-  {
-    path: "/admin",
-    element: <AdminLayout />,
-    children: [
-      { path: "leads", element: <LeadsPage /> },
-      { path: "integrations", element: <IntegrationsPage /> },
-      { path: "messages", element: <MessagesPage /> },
     ],
   },
   { path: "*", element: <Navigate to="/app" replace /> },

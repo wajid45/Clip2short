@@ -19,7 +19,7 @@ import {
 
 /**
  * The 3D backdrop: a field of points rolling like a waveform (the stream's audio, if you like),
- * with a wireframe 9:16 clip frame turning slowly above it, the Shortlark mark in space.
+ * with a wireframe 9:16 clip frame turning slowly above it, the Clip2Short mark in space.
  * The pointer sends a ripple through the field and leans the frame; scrolling turns it.
  *
  *   variant "hero"  sits on the page background (light or dark), points tinted with the brand.

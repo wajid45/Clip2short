@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import { FlashToast } from "@shortlark/shared/components/flash-toast";
 import { Link } from "@/lib/nav";
 import { useState } from "react";
 import { PasswordToggle } from "@shortlark/shared/components/password-toggle";
@@ -11,7 +12,7 @@ const variants: Record<Variant, string> = {
   // Same dusk blue and hover as the landing page CTAs. Disabled keeps the hue and only fades.
   primary: "bg-signal text-on-signal shadow-sm shadow-signal/20 hover:bg-signal-strong disabled:hover:bg-signal disabled:shadow-none",
   secondary: "bg-surface-2 text-text border border-line hover:border-line-strong hover:bg-surface-3",
-  ghost: "text-muted hover:text-text hover:bg-surface-2",
+  ghost: "text-text hover:bg-surface-2",
   danger: "bg-transparent text-danger border border-danger/40 hover:bg-danger/10",
 };
 const sizes: Record<Size, string> = {
@@ -22,7 +23,7 @@ const sizes: Record<Size, string> = {
 
 export function buttonClass(variant: Variant = "secondary", size: Size = "md", extra?: string) {
   return clsx(
-    "inline-flex items-center justify-center rounded-lg font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+    "inline-flex items-center justify-center rounded-lg font-normal whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-60",
     variants[variant],
     sizes[size],
     extra,
@@ -76,7 +77,7 @@ export function Spinner({ className }: { className?: string }) {
 }
 
 export const inputClass =
-  "w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-text placeholder:text-faint transition-[border-color,box-shadow] hover:border-faint focus:border-signal focus:ring-3 focus:ring-signal/20 focus:outline-none dark:border-[#47474f] dark:bg-surface-2 dark:placeholder:text-muted/75 dark:hover:border-[#5a5a63]";
+  "w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-text placeholder:text-faint transition-[border-color,box-shadow] hover:border-faint focus:border-signal focus:ring-3 focus:ring-signal/20 focus:outline-none dark:border-[#4a4b55] dark:bg-surface-2 dark:placeholder:text-muted/75 dark:hover:border-[#5e5f6b]";
 
 export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={clsx(inputClass, "h-10", className)} {...rest} />;
@@ -121,12 +122,12 @@ export function Card({ className, children }: { className?: string; children: Re
   return <div className={clsx("rounded-[var(--radius-card)] border border-line bg-surface", className)}>{children}</div>;
 }
 
-export function PageHeader({ title, description, actions }: { title: ReactNode; description?: ReactNode; actions?: ReactNode }) {
+/** Page title and actions. `description` is accepted but not shown: titles stand alone, as in the admin portal. */
+export function PageHeader({ title, actions, className }: { title: ReactNode; description?: ReactNode; actions?: ReactNode; className?: string }) {
   return (
-    <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className={clsx("flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between", className ?? "mb-8")}>
       <div className="min-w-0">
         <h1 className="text-[26px] font-semibold tracking-tight text-text">{title}</h1>
-        {description && <p className="mt-1.5 max-w-2xl text-[15px] text-muted">{description}</p>}
       </div>
       {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -135,7 +136,7 @@ export function PageHeader({ title, description, actions }: { title: ReactNode; 
 
 export function EmptyState({ title, body, action }: { title: string; body: ReactNode; action?: ReactNode }) {
   return (
-    <div className="rounded-[var(--radius-card)] border border-dashed border-line-strong px-6 py-14 text-center">
+    <div className="rounded-[var(--radius-card)] border border-dashed border-line-strong bg-surface px-6 py-14 text-center">
       <p className="text-[15px] font-medium text-text">{title}</p>
       <p className="mx-auto mt-1.5 max-w-md text-sm text-muted">{body}</p>
       {action && <div className="mt-5 flex justify-center">{action}</div>}
@@ -150,5 +151,8 @@ export function Notice({ tone = "info", children }: { tone?: "info" | "warn" | "
     error: "border-danger/30 bg-danger/10 text-danger",
     success: "border-ready/30 bg-ready/10 text-ready",
   };
+  // Success and error messages show as a toast rather than a box; info and warn stay inline (they
+  // often explain a persistent state the reader needs to keep seeing).
+  if (tone === "success" || tone === "error") return <FlashToast tone={tone}>{children}</FlashToast>;
   return <div className={clsx("rounded-lg border px-3.5 py-2.5 text-sm leading-relaxed", tones[tone])}>{children}</div>;
 }

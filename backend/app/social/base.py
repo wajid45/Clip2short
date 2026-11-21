@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import time
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 from urllib.parse import urlencode
 
@@ -78,6 +78,7 @@ class Refreshed:
 class Provider:
     id: str = ""
     uses_pkce: bool = False
+    refresh_ahead: timedelta = timedelta(minutes=10)  # renew tokens this long before they expire
 
     def configured(self) -> bool:
         raise NotImplementedError

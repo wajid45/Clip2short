@@ -1,12 +1,13 @@
 import { forwardRef, useCallback, useMemo, type AnchorHTMLAttributes } from "react";
 import { Link as RouterLink, useLocation, useNavigate, useSearchParams as useRouterSearchParams } from "react-router";
+import { toInternal, toPublic } from "./routes";
 
 /**
  * Small navigation layer over React Router, so components can stay framework-neutral:
  * <Link href>, useRouter().push/replace/refresh/back, usePathname, useSearchParams.
  */
 
-export const REFRESH_EVENT = "shortlark:refresh";
+export const REFRESH_EVENT = "clip2short:refresh";
 
 type LinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
   href: string;
@@ -21,7 +22,7 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link({ hre
   // API downloads, external links and new tabs are plain anchors.
   if (/^(https?:|mailto:|tel:)/.test(href) || href.startsWith("/api/") || rest.target === "_blank" || rest.download !== undefined)
     return <a ref={ref} href={href} {...rest} />;
-  return <RouterLink ref={ref} to={href} replace={replace} preventScrollReset={!scroll} {...rest} />;
+  return <RouterLink ref={ref} to={toPublic(href)} replace={replace} preventScrollReset={!scroll} {...rest} />;
 });
 
 /** Re-fetches the data of every page currently on screen (the old `router.refresh()`). */
@@ -31,14 +32,15 @@ export function refreshPageData() {
 
 export function useRouter() {
   const navigate = useNavigate();
-  const push = useCallback((to: string) => void navigate(to), [navigate]);
-  const replace = useCallback((to: string) => void navigate(to, { replace: true }), [navigate]);
+  const push = useCallback((to: string) => void navigate(toPublic(to)), [navigate]);
+  const replace = useCallback((to: string) => void navigate(toPublic(to), { replace: true }), [navigate]);
   const back = useCallback(() => void navigate(-1), [navigate]);
   return useMemo(() => ({ push, replace, back, refresh: refreshPageData }), [push, replace, back]);
 }
 
+/** The current path with readable page names (/app/billing), whatever the address bar shows. */
 export function usePathname(): string {
-  return useLocation().pathname;
+  return toInternal(useLocation().pathname);
 }
 
 export function useSearchParams(): URLSearchParams {

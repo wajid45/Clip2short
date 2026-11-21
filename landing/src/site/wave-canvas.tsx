@@ -23,7 +23,7 @@ export function WaveCanvas({ variant, className }: { variant: "hero" | "dark"; c
     }
     const load =
       variant === "hero"
-        ? import("../three/aurora-scene").then(({ mountAurora }) => () => mountAurora(canvas, { reducedMotion }))
+        ? import("@shortlark/shared/three/aurora-scene").then(({ mountAurora }) => () => mountAurora(canvas, { reducedMotion }))
         : import("../three/wave-scene").then(({ mountWave }) => () => mountWave(canvas, { variant, reducedMotion }));
     load
       .then((mount) => {

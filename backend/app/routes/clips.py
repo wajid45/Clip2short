@@ -2,26 +2,30 @@
 
 import json
 import logging
+import os
 import re
+import subprocess
+import tempfile
 import threading
+import zipfile
 from typing import Literal
 
 from fastapi import Depends, Request
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from pydantic import Field
-from sqlalchemy import delete, select, update
-from sqlalchemy.orm import Session
+from starlette.background import BackgroundTask
 
 from ..ai.client import ai_configured, describe_ai_error
 from ..ai.clipper import CATEGORIES
 from ..ai.suggest import suggest_copy
-from ..auth import require_subscriber, require_user
+from ..auth import assert_feature, require_subscriber, require_user
 from ..captions.parse import transcript_text
 from ..clips import CLIP_STATUSES, clip_order, clip_where, filters_from_params
 from ..credits import InsufficientCredits, refund_credits, spend_credits
 from ..db import get_db, utcnow
 from ..http import HttpError, dumps, iso, json_response, validate
 from ..models import Clip, User, Video
+from ..odm import Session, delete, select, update
 from ..ratelimit import rate_limit
 from ..video.cut import MAX_DOWNLOAD_SEC, spawn_cut
 from ..video.fetcher import assert_public_url
@@ -30,7 +34,7 @@ from ..video.source import timestamp_url
 from .account import to_csv
 from .common import JsonBody, Model, api_router, not_found, text
 
-log = logging.getLogger("shortlark.clips")
+log = logging.getLogger("clip2short.clips")
 router = api_router()
 
 SUGGEST_COST = 1
@@ -88,6 +92,83 @@ def bulk(body: JsonBody, user: User = Depends(require_user), s: Session = Depend
         count = s.execute(update(Clip).where(*where).values(status=b.status, updatedAt=utcnow())).rowcount
     s.commit()
     return json_response({"count": count})
+
+
+ZIP_MAX_CLIPS = 20
+ZIP_MAX_SECONDS = 30 * 60  # total video in one ZIP
+
+
+@router.get("/clips/zip")
+def download_zip(request: Request, ids: str = "", format: str = "original", user: User = Depends(require_user), s: Session = Depends(get_db)):  # noqa: A002
+    """The selected clips as MP4s in one ZIP (?ids=a,b,c&format=original|vertical).
+
+    Clips from direct video files are cut with ffmpeg, like single downloads. YouTube and Vimeo
+    don't permit downloading their videos, so those clips are listed in skipped.txt instead."""
+    wanted = [i for i in ids.split(",") if i][:ZIP_MAX_CLIPS + 1]
+    if not wanted:
+        raise HttpError(400, "Select the clips to download.")
+    if len(wanted) > ZIP_MAX_CLIPS:
+        raise HttpError(400, f"Download up to {ZIP_MAX_CLIPS} clips at a time.")
+    clips = s.scalars(select(Clip).where(Clip.id.in_(wanted), Clip.userId == user.id)).all()
+    if not clips:
+        raise not_found("Clip")
+    cuttable = [c for c in clips if c.video.platform == "direct"]
+    if sum(c.endSec - c.startSec for c in cuttable) > ZIP_MAX_SECONDS:
+        raise HttpError(400, "That's more than 30 minutes of video. Select fewer clips.")
+    rate_limit(request, f"download:{user.id}", 20, 60 * 60)
+    vertical = format == "vertical"
+
+    tmp = tempfile.NamedTemporaryFile(prefix="clip2short-", suffix=".zip", delete=False)
+    tmp.close()
+    skipped: list[str] = []
+    names: set[str] = set()
+    try:
+        with zipfile.ZipFile(tmp.name, "w", zipfile.ZIP_STORED) as zf:  # MP4 is already compressed
+            for c in clips:
+                v = c.video
+                if v.platform != "direct":
+                    skipped.append(f"{c.title}: from {v.platform.title()}, which doesn't allow downloads")
+                    continue
+                if c.endSec - c.startSec > MAX_DOWNLOAD_SEC:
+                    skipped.append(f"{c.title}: longer than 10 minutes")
+                    continue
+                try:
+                    assert_public_url(v.sourceUrl)
+                except ValueError:
+                    skipped.append(f"{c.title}: the source link isn't reachable")
+                    continue
+                proc = spawn_cut(v.sourceUrl, c.startSec, c.endSec, vertical)
+                try:
+                    data, err = proc.communicate(timeout=MAX_RENDER_SECONDS)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    skipped.append(f"{c.title}: took too long to cut")
+                    continue
+                if proc.returncode != 0 or not data:
+                    log.error("ffmpeg failed for clip %s: %s", c.id, (err or b"")[:300].decode(errors="replace"))
+                    skipped.append(f"{c.title}: couldn't be cut (is the file link still public?)")
+                    continue
+                name = f"{_slug(c.title)}{'-vertical' if vertical else ''}.mp4"
+                n = 2
+                while name in names:
+                    name = f"{_slug(c.title)}-{n}.mp4"
+                    n += 1
+                names.add(name)
+                zf.writestr(name, data)
+            if skipped:
+                zf.writestr("skipped.txt", "These clips aren't in this ZIP:\n\n" + "\n".join(f"- {line}" for line in skipped) + "\n")
+    except Exception:
+        os.unlink(tmp.name)
+        raise
+    if not names:
+        os.unlink(tmp.name)
+        raise HttpError(409, "None of these clips can be downloaded: YouTube and Vimeo don't allow downloading their videos. Downloads work for clips from direct video files.")
+    return FileResponse(
+        tmp.name,
+        media_type="application/zip",
+        filename=f"clip2short-clips-{utcnow().date().isoformat()}.zip",
+        background=BackgroundTask(os.unlink, tmp.name),
+    )
 
 
 @router.get("/clips/export")
@@ -211,6 +292,7 @@ def delete_clip(clip_id: str, user: User = Depends(require_user), s: Session = D
 @router.post("/clips/{clip_id}/suggest")
 def suggest(clip_id: str, request: Request, user: User = Depends(require_subscriber), s: Session = Depends(get_db)):
     """AI posting copy for a clip (1 credit, refunded if it fails). Nothing is applied until the user approves."""
+    assert_feature(user, "captions")
     clip = _own_clip(s, user, clip_id)
     if not ai_configured():
         raise HttpError(503, "AI suggestions aren't configured on this server (missing GEMINI_API_KEY).")

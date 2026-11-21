@@ -12,6 +12,8 @@
   /* The landing page is set in Playfair Display (loaded in index.html); the app keeps its own fonts. */
   --font-sans: "Playfair Display", "Times New Roman", Georgia, serif;
   --font-display: "Playfair Display", "Times New Roman", Georgia, serif;
+  /* Labels, eyebrows and figures in Playfair too: one typeface across the site. */
+  --font-mono: "Playfair Display", "Times New Roman", Georgia, serif;
   --color-sunset-blue: #365ecf;
   --color-sunset-violet: #8449c7;
   --color-sunset-magenta: #e242c0;

@@ -15,7 +15,7 @@ export function CreditCalculator() {
   const fits = PLANS.find((p) => p.monthlyCredits >= minutes);
   const plan = fits ?? PLANS[PLANS.length - 1];
   const spare = plan.monthlyCredits - minutes;
-  const max = 30;
+  const max = Math.ceil(hoursOf(PLANS[PLANS.length - 1].monthlyCredits) / 5) * 5; // the slider reaches the biggest plan
 
   return (
     <div className="grid gap-10 rounded-[32px] border border-line bg-surface p-7 sm:p-10 lg:grid-cols-[1.15fr_1fr] lg:items-center lg:gap-14 lg:p-12">
@@ -53,7 +53,10 @@ export function CreditCalculator() {
         <div className="mt-4 flex items-baseline justify-between gap-4">
           <p className="text-[31px] leading-none tracking-[-0.02em]">{plan.name}</p>
           <p className="flex items-baseline gap-1">
-            <span className="text-[31px] leading-none tracking-[-0.03em]">${plan.price}</span>
+            <span className="text-[31px] leading-none tracking-[-0.03em]" aria-label={`$${plan.price}`}>
+              <span className="price-dollar" aria-hidden="true">$</span>
+              {plan.price}
+            </span>
             <span className="hud text-white/55">/ mo</span>
           </p>
         </div>
@@ -69,7 +72,7 @@ export function CreditCalculator() {
             const h = hoursOf(p.monthlyCredits);
             return (
               <div key={p.id} className="flex items-center gap-3">
-                <span className={clsx("hud w-14", p.id === plan.id ? "text-white" : "text-white/40")}>{p.name}</span>
+                <span className={clsx("hud w-16", p.id === plan.id ? "text-white" : "text-white/40")}>{p.name}</span>
                 <span className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
                   <span
                     className={clsx("absolute inset-y-0 left-0 rounded-full transition-[width] duration-300", p.id === plan.id ? "bg-signal" : "bg-white/25")}

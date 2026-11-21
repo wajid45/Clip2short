@@ -4,17 +4,16 @@ import csv
 import hmac
 import io
 import re
+import time
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
 import httpx
 from fastapi import Depends, Request
-from fastapi.responses import Response
-from sqlalchemy import select, update
-from sqlalchemy.orm import Session
+from fastapi.responses import RedirectResponse, Response
 
 from .. import notify
-from ..auth import require_admin, require_user
+from ..auth import current_user, has_feature, is_admin, require_user
 from ..background import after
 from ..config import settings
 from ..credits import by_source, credit_summary, ensure_trial
@@ -22,7 +21,9 @@ from ..db import get_db, utcnow
 from ..http import HttpError, iso, json_response, validate
 from ..integrations import INTEGRATIONS, load_integrations
 from ..models import CreditTransaction, IntegrationSetting, Lead, RevokedSession, User
+from ..odm import Session, select, update
 from ..passwords import MAX_LENGTH, password_problem
+from ..portal import unsign
 from ..ratelimit import rate_limit, rate_limit_account
 from ..security import MAX_AGE, clear_session, encrypt, hash_password, needs_rehash, session_payload, set_session, verify_password
 from ..social.publisher import refresh_stats, run_publisher
@@ -89,10 +90,8 @@ def signup(request: Request, body: JsonBody, s: Session = Depends(get_db)):
     return res
 
 
-@router.post("/auth/logout")
-def logout(request: Request, s: Session = Depends(get_db)):
-    """Ends this session on the server too, so a copied cookie stops working."""
-    payload = session_payload(request)
+def _revoke(s: Session, payload: dict | None) -> None:
+    """Ends a session on the server, so a copied cookie stops working."""
     jti = payload.get("jti") if payload else None
     if payload and isinstance(jti, str) and not s.get(RevokedSession, jti):
         now = utcnow()
@@ -100,7 +99,45 @@ def logout(request: Request, s: Session = Depends(get_db)):
         exp = payload.get("exp")
         s.add(RevokedSession(jti=jti, expiresAt=datetime.fromtimestamp(exp, UTC) if isinstance(exp, int) else now + timedelta(seconds=MAX_AGE)))
         s.commit()
+
+
+@router.post("/auth/logout")
+def logout(request: Request, s: Session = Depends(get_db)):
+    """Ends this session on the server too, so a copied cookie stops working."""
+    _revoke(s, session_payload(request))
     res = json_response({"ok": True})
+    clear_session(res)
+    return res
+
+
+SWITCH_FRESH_SECONDS = 60 * 60  # an app sign-in younger than this opens straight in from the admin dashboard
+
+
+@router.get("/auth/from-admin")
+def from_admin(request: Request, handoff: str = "", s: Session = Depends(get_db)):
+    """The admin dashboard's "Open app" button.
+
+    With a valid pass from a signed-in dashboard (single use, 60 seconds) the admin lands in the app
+    signed in, without a new sign-in. Without one, an app sign-in younger than an hour opens straight
+    in; an older one ends and the sign-in page asks for the password (and 2FA code) again."""
+    if handoff:
+        claims = unsign(handoff, "app-handoff")
+        jti = claims.get("jti") if claims else None
+        user = s.get(User, claims["sub"]) if claims else None
+        fresh = bool(isinstance(jti, str) and not s.get(RevokedSession, jti))
+        if user and fresh and claims and claims.get("v") == user.sessionVersion and user.suspendedAt is None and is_admin(user):
+            s.add(RevokedSession(jti=jti, expiresAt=utcnow() + timedelta(minutes=5)))  # spend the pass
+            s.commit()
+            res = RedirectResponse("/app", status_code=303)
+            set_session(res, user.id, user.sessionVersion)
+            return res
+    payload = session_payload(request)
+    user = current_user(request, s)
+    iat = payload.get("iat") if payload else None
+    if user and isinstance(iat, int) and time.time() - iat <= SWITCH_FRESH_SECONDS:
+        return RedirectResponse("/app", status_code=303)
+    _revoke(s, payload)
+    res = RedirectResponse("/login?next=%2Fapp&switch=1", status_code=303)
     clear_session(res)
     return res
 
@@ -131,17 +168,18 @@ _IDS = tuple(i["id"] for i in INTEGRATIONS)
 
 
 class SaveIntegration(Model):
-    id: Literal["google", "meta"]
+    id: Literal["google", "meta", "instagram"]
     clientId: text(3, 300, min_msg="Enter the client/app ID")  # type: ignore[valid-type]
     clientSecret: text(0, 500) | None = None  # type: ignore[valid-type]
 
 
 class RemoveIntegration(Model):
-    id: Literal["google", "meta"]
+    id: Literal["google", "meta", "instagram"]
 
 
-@router.post("/admin/integrations")
-def save_integration(body: JsonBody, _: User = Depends(require_admin), s: Session = Depends(get_db)):
+
+def store_integration(s: Session, body: object) -> None:
+    """Saves a network's app ID and (encrypted) secret. A blank secret keeps the saved one."""
     b = validate(SaveIntegration, body)
     existing = s.get(IntegrationSetting, b.id)
     info = next(i for i in INTEGRATIONS if i["id"] == b.id)
@@ -154,18 +192,16 @@ def save_integration(body: JsonBody, _: User = Depends(require_admin), s: Sessio
         s.add(IntegrationSetting(id=b.id, clientId=b.clientId, clientSecretEnc=secret_enc))
     s.commit()
     load_integrations(force=True)
-    return json_response({"ok": True})
 
 
-@router.delete("/admin/integrations")
-def remove_integration(body: JsonBody, _: User = Depends(require_admin), s: Session = Depends(get_db)):
+
+def drop_integration(s: Session, body: object) -> None:
     b = validate(RemoveIntegration, body)
     row = s.get(IntegrationSetting, b.id)
     if row:
         s.delete(row)
         s.commit()
     load_integrations(force=True)
-    return json_response({"ok": True})
 
 
 def csv_cell(v: object) -> str:
@@ -183,8 +219,8 @@ def to_csv(header: list[str], rows: list[list[object]]) -> str:
     return "﻿" + buf.getvalue().rstrip("\r\n")
 
 
-@router.get("/admin/leads/export")
-def export_leads(_: User = Depends(require_admin), s: Session = Depends(get_db)):
+def leads_csv(s: Session) -> Response:
+    """Every captured lead as a CSV download (used by the admin console)."""
     leads = s.scalars(select(Lead).order_by(Lead.createdAt.desc())).all()
     cols = ["email", "source", "utmSource", "utmMedium", "utmCampaign", "referrer", "signups", "createdAt"]
     rows = [[iso(lead.createdAt) if c == "createdAt" else getattr(lead, c) for c in cols] for lead in leads]
@@ -269,7 +305,9 @@ def clip_thumbnail(clip_id: str, s: Session = Depends(get_db)):
 
 @router.post("/analytics/refresh")
 def refresh_my_stats(request: Request, user: User = Depends(require_user)):
-    rate_limit(request, f"stats:{user.id}", 6, 10 * 60)
+    if not has_feature(user, "postAnalytics"):
+        return json_response({"refreshed": 0})
+    rate_limit(request, f"stats:{user.id}", 15, 10 * 60)  # live page: every 2 minutes, plus manual refreshes
     return json_response({"refreshed": refresh_stats(user_id=user.id, limit=100)})
 
 

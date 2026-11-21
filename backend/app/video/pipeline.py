@@ -8,8 +8,6 @@ from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlsplit
 
-from sqlalchemy import delete, exists, select, update
-
 from .. import notify
 from ..ai.agent_fetch import agent_fetch_captions
 from ..ai.client import ai_configured, describe_ai_error
@@ -21,10 +19,11 @@ from ..captions.youtube import YouTubePlayerData, fetch_oembed, fetch_watch_page
 from ..credits import InsufficientCredits, credit_summary, refund_credits, spend_credits
 from ..db import SessionLocal, utcnow
 from ..models import Clip, Post, Video
+from ..odm import delete, select, update
 from ..plans import analysis_cost
 from .source import ParsedSource, youtube_thumb
 
-log = logging.getLogger("shortlark.pipeline")
+log = logging.getLogger("clip2short.pipeline")
 
 
 @dataclass
@@ -199,12 +198,14 @@ def run_analysis(video_id: str, focus: str = "auto") -> None:  # category comes 
                 focus=focus,
                 category=video.category,
             )
+            # Old AI ideas that were never posted make way for the new ones.
+            posted = set(s.scalars(select(Post.clipId).where(Post.clipId.in_(s.scalars(select(Clip.id).where(Clip.videoId == video_id)).all()))).all())
             s.execute(
                 delete(Clip).where(
                     Clip.videoId == video_id,
                     Clip.origin == "ai",
                     Clip.status == "idea",
-                    ~exists(select(Post.id).where(Post.clipId == Clip.id)),
+                    Clip.id.not_in(list(posted)),
                 )
             )
             for c in clips:

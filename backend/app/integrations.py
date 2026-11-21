@@ -1,6 +1,6 @@
 """Developer-app credentials for each social network.
 
-Like Buffer or Hootsuite, Shortlark registers ONE developer app per network; every customer
+Like Buffer or Hootsuite, Clip2Short registers ONE developer app per network; every customer
 then just clicks "Connect" and signs in with their own account. An admin enters these
 credentials once in Admin → Integrations (stored encrypted), or sets them as environment
 variables. Values saved in the app take precedence.
@@ -15,13 +15,12 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import select
-
 from .db import SessionLocal
 from .models import IntegrationSetting
+from .odm import select
 from .security import decrypt
 
-log = logging.getLogger("shortlark.integrations")
+log = logging.getLogger("clip2short.integrations")
 
 INTEGRATIONS: list[dict[str, Any]] = [
     {
@@ -42,8 +41,8 @@ INTEGRATIONS: list[dict[str, Any]] = [
     },
     {
         "id": "meta",
-        "name": "Meta (Facebook + Instagram)",
-        "platforms": ["facebook", "instagram"],
+        "name": "Meta (Facebook Pages)",
+        "platforms": ["facebook"],
         "consoleUrl": "https://developers.facebook.com/apps",
         "idLabel": "App ID",
         "secretLabel": "App secret",
@@ -52,7 +51,23 @@ INTEGRATIONS: list[dict[str, Any]] = [
         "steps": [
             "Create a Business app and add the Facebook Login product.",
             "Add both redirect URIs below to Facebook Login → Valid OAuth Redirect URIs.",
-            "Request pages_manage_posts, pages_read_engagement, instagram_content_publish and instagram_manage_insights in App Review.",
+            "Request pages_manage_posts, pages_read_engagement and read_insights in App Review.",
+        ],
+    },
+    {
+        "id": "instagram",
+        "name": "Instagram (Instagram Login)",
+        "platforms": ["instagram"],
+        "consoleUrl": "https://developers.facebook.com/apps",
+        "idLabel": "Instagram app ID",
+        "secretLabel": "Instagram app secret",
+        "env": ("INSTAGRAM_APP_ID", "INSTAGRAM_APP_SECRET"),
+        "secretOptional": False,
+        "steps": [
+            "In your Meta app, add the Instagram product and choose API setup with Instagram login.",
+            "Copy the Instagram app ID and secret from that page (they differ from the Meta App ID).",
+            "Under Business login settings, add the redirect URI below as an OAuth redirect URI.",
+            "Request instagram_business_basic, instagram_business_content_publish and instagram_business_manage_insights in App Review.",
         ],
     },
 ]

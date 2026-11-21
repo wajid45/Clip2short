@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { apiUrl } from "@/lib/client";
 import { Navigate, useLocation } from "react-router";
 import type { Jsonify } from "@shortlark/shared/json";
 import { PageLoader } from "@/components/page-loader";
-import { ButtonLink, EmptyState } from "@/components/ui";
+import { ButtonLink, EmptyState, PageHeader } from "@/components/ui";
 import { REFRESH_EVENT } from "./nav";
 
 type State<T> =
@@ -10,6 +11,7 @@ type State<T> =
   | { status: "ready"; data: T }
   | { status: "redirect"; to: string; data: T | null }
   | { status: "missing"; data: T | null }
+  | { status: "locked"; message: string; data: T | null }
   | { status: "error"; message: string; data: T | null };
 
 /**
@@ -26,7 +28,7 @@ export function usePageData<T>(path: string) {
       const id = ++seq.current;
       if (!quiet) setState((s) => ({ status: "loading", data: s.data }));
       try {
-        const res = await fetch(`/api/page${path}`, { headers: { Accept: "application/json" }, cache: "no-store" });
+        const res = await fetch(apiUrl(`/api/page${path}`), { headers: { Accept: "application/json" }, cache: "no-store", credentials: "include" });
         if (id !== seq.current) return;
         if (res.status === 401) {
           const next = encodeURIComponent(location.pathname + location.search);
@@ -34,7 +36,10 @@ export function usePageData<T>(path: string) {
           return;
         }
         if (res.status === 402) {
-          setState((s) => ({ status: "redirect", to: "/app/billing?required=1", data: s.data }));
+          const body = await res.json().catch(() => null);
+          // A feature the plan doesn't include: say so on the page. Out of credits: open Billing.
+          if (body?.code === "plan_feature") setState({ status: "locked", message: body.error, data: null });
+          else setState((s) => ({ status: "redirect", to: "/app/billing?required=1", data: s.data }));
           return;
         }
         if (res.status === 404) {
@@ -84,6 +89,13 @@ export function PageData<T>({
 
   if (state.status === "redirect") return <Navigate to={state.to} replace />;
   if (state.status === "missing") return <NotFound />;
+  if (state.status === "locked")
+    return (
+      <>
+        {typeof title === "string" && <PageHeader title={title} />}
+        <EmptyState title="Not included in your plan" body={state.message} action={<ButtonLink href="/app/billing?section=plan" variant="primary">See plans</ButtonLink>} />
+      </>
+    );
   if (state.status === "error" && !data)
     return (
       <EmptyState
@@ -103,7 +115,7 @@ export function PageData<T>({
 export function useTitle(title: string | null | undefined) {
   useEffect(() => {
     if (title === undefined || title === null) return;
-    document.title = title ? `${title} · Shortlark` : "Shortlark";
+    document.title = title ? `${title} · Clip2Short` : "Clip2Short";
   }, [title]);
 }
 

@@ -126,7 +126,7 @@ export function TwoFactorSettings({ status }: { status: Status }) {
           <ol className="space-y-1 text-sm text-muted">
             <li>1. Open your authenticator app and add an account.</li>
             <li>2. Scan this QR code, or enter the key below.</li>
-            <li>3. Type the 6-digit code it shows for Shortlark.</li>
+            <li>3. Type the 6-digit code it shows for Clip2Short.</li>
           </ol>
           <QrCode text={step.otpauthUrl} />
           <ManualKey secret={step.secret} />
@@ -277,7 +277,7 @@ function ManualKey({ secret }: { secret: string }) {
 /** Shown once: the backup codes, with copy and download, until the person confirms they saved them. */
 function BackupCodes({ codes, fresh, onSaved }: { codes: string[]; fresh: boolean; onSaved: () => void }) {
   const [copied, setCopied] = useState(false);
-  const text = `Shortlark backup codes\nEach code works once. Keep them somewhere safe.\n\n${codes.join("\n")}\n`;
+  const text = `Clip2Short backup codes\nEach code works once. Keep them somewhere safe.\n\n${codes.join("\n")}\n`;
   return (
     <div className="grid max-w-lg gap-4">
       <Notice tone="success">{fresh ? "Two-factor sign-in is on." : "Here are your new backup codes."}</Notice>
@@ -306,7 +306,7 @@ function BackupCodes({ codes, fresh, onSaved }: { codes: string[]; fresh: boolea
           type="button"
           onClick={() => {
             const url = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
-            const a = Object.assign(document.createElement("a"), { href: url, download: "shortlark-backup-codes.txt" });
+            const a = Object.assign(document.createElement("a"), { href: url, download: "clip2short-backup-codes.txt" });
             a.click();
             URL.revokeObjectURL(url);
           }}

@@ -7,7 +7,7 @@
 export type { Jsonify } from "./json";
 import type { SocialPlatform } from "./social";
 
-export type IntegrationId = "meta" | "google";
+export type IntegrationId = "meta" | "google" | "instagram";
 
 export type MeData = {
   name: string;
@@ -16,6 +16,7 @@ export type MeData = {
   credits: number;
   monthlyCredits: number | null;
   isAdmin: boolean;
+  adminDashboardUrl: string | null;
 };
 
 export type VideosData = {
@@ -35,6 +36,7 @@ export type VideosData = {
     _count: { clips: number };
   }[];
   aiConfigured: boolean;
+  engines: string[]; // category engines the plan includes
 };
 
 export type VideoData = {
@@ -253,6 +255,8 @@ export type AccountsData = {
     configured: boolean;
     integrationId: IntegrationId | null;
     integrationName: string | null;
+    allowed: boolean; // the user's plan includes this network
+    planNeeded: string | null; // the smallest plan that does, when it doesn't
   }[];
   connectedCount: number;
   accountLimit: number;
@@ -310,6 +314,7 @@ export type IntegrationsData = {
     savedClientId: string;
     hasSavedSecret: boolean;
     source: "app" | "env" | "none";
+    connectedAccounts: number;
   }[];
 };
 

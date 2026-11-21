@@ -5,10 +5,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 
-from sqlalchemy import or_, select
-from sqlalchemy.sql import ColumnElement
-
 from .models import Clip, Video
+from .odm import ColumnElement, or_, select
 
 CLIP_STATUSES = ("idea", "draft", "ready", "published")
 

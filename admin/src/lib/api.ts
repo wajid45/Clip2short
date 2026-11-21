@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/** JSON calls to the portal API (same origin; /api is proxied to the API server). */
+/**
+ * API origin. Empty in development and on a same-origin deploy (a host that proxies `/api`), so
+ * calls stay relative; set VITE_API_URL at build time when the API is on its own origin.
+ */
+export const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+
+/** Prefix an `/api` path with the API origin when one is configured; otherwise leave it relative. */
+export const apiUrl = (path: string) => (API_BASE && path.startsWith("/api") ? API_BASE + path : path);
+
+/** JSON calls to the portal API. Same origin in dev (Vite proxies /api); an absolute API origin in production when VITE_API_URL is set. */
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -13,14 +22,14 @@ export class ApiError extends Error {
 
 /** `background: true` marks automatic refreshes, which do not count as activity for the idle sign-out. */
 export async function api<T>(path: string, init?: { method?: string; body?: unknown; background?: boolean }): Promise<T> {
-  const res = await fetch(`/api/portal${path}`, {
+  const res = await fetch(apiUrl(`/api/portal${path}`), {
     method: init?.method ?? (init?.body !== undefined ? "POST" : "GET"),
     headers: {
       ...(init?.body !== undefined ? { "Content-Type": "application/json" } : {}),
       ...(init?.background ? { "X-Background": "1" } : {}),
     },
     body: init?.body !== undefined ? JSON.stringify(init.body) : undefined,
-    credentials: "same-origin",
+    credentials: "include", // send the portal cookie even when the API is on another origin
   });
   const data = await res.json().catch(() => null);
   if (!res.ok) {

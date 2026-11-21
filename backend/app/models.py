@@ -1,7 +1,7 @@
-"""Data model. Table and column names match the existing database, so current data keeps working.
+"""Data model: one MongoDB collection per class. Collection and field names match the old SQL tables
+and columns, so the data moved over as it was (see app/migrate_sqlite_to_mongo.py).
 
-SQLite for local development; set DATABASE_URL to a Postgres URL for production
-(every type used here is portable between the two).
+Fields are `Column`s from app/odm.py; `fk=` records the old foreign keys so deletes still cascade.
 """
 
 from __future__ import annotations
@@ -9,71 +9,69 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Boolean, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from .db import Base, UTCDateTime, new_id, utcnow
+from .db import Base, new_id, utcnow
+from .odm import Column, Index, UniqueConstraint, relationship
 
 
-def _id() -> Mapped[str]:
-    return mapped_column(String, primary_key=True, default=new_id)
+def _id() -> Any:
+    return Column(primary_key=True, default=new_id)
 
 
-def _created() -> Mapped[datetime]:
-    return mapped_column(UTCDateTime, nullable=False, default=utcnow)
+def _created() -> Any:
+    return Column(default=utcnow)
 
 
-def _updated() -> Mapped[datetime]:
-    return mapped_column(UTCDateTime, nullable=False, default=utcnow, onupdate=utcnow)
+def _updated() -> Any:
+    return Column(default=utcnow, onupdate=utcnow)
 
 
-def _user_fk() -> Mapped[str]:
-    return mapped_column(String, ForeignKey("User.id", ondelete="CASCADE", onupdate="CASCADE"), nullable=False)
+def _user_fk() -> Any:
+    return Column(fk=("User", "CASCADE"))
 
 
 class Serializable:
     """`to_dict()` returns the row with its column names, as the API has always sent them."""
 
     def to_dict(self, exclude: tuple[str, ...] = ()) -> dict[str, Any]:
-        return {c.key: getattr(self, c.key) for c in self.__table__.columns if c.key not in exclude}  # type: ignore[attr-defined]
+        return {k: getattr(self, k) for k in self.__columns__ if k not in exclude}  # type: ignore[attr-defined]
 
 
 class User(Base, Serializable):
     __tablename__ = "User"
-    id: Mapped[str] = _id()
-    email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
-    name: Mapped[str | None] = mapped_column(String)
-    passwordHash: Mapped[str] = mapped_column(String, nullable=False)
-    createdAt: Mapped[datetime] = _created()
-    updatedAt: Mapped[datetime] = _updated()
+    id: str = _id()
+    email: str = Column(unique=True)
+    name: str | None = Column()
+    passwordHash: str = Column()
+    createdAt: datetime = _created()
+    updatedAt: datetime = _updated()
     # Billing (Stripe)
-    stripeCustomerId: Mapped[str | None] = mapped_column(String, unique=True)
-    stripeSubscriptionId: Mapped[str | None] = mapped_column(String, unique=True)
-    plan: Mapped[str] = mapped_column(String, nullable=False, default="none")  # none | creator | pro | studio
-    subscriptionStatus: Mapped[str] = mapped_column(String, nullable=False, default="none")
-    currentPeriodEnd: Mapped[datetime | None] = mapped_column(UTCDateTime)
-    cancelAtPeriodEnd: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    stripeCustomerId: str | None = Column(unique=True)
+    stripeSubscriptionId: str | None = Column(unique=True)
+    plan: str = Column(default="none")  # none | creator | pro | studio
+    subscriptionStatus: str = Column(default="none")
+    currentPeriodEnd: datetime | None = Column()
+    cancelAtPeriodEnd: bool = Column(default=False)
     # Credits: the free trial is granted once.
-    trialStartedAt: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    trialStartedAt: datetime | None = Column()
     # Bumped on password change/reset so every other session is signed out.
-    sessionVersion: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    sessionVersion: int = Column(default=0)
     # Set by an admin in the portal: the account can't sign in until it is lifted.
-    suspendedAt: Mapped[datetime | None] = mapped_column(UTCDateTime)
-    suspendedReason: Mapped[str | None] = mapped_column(String)
+    suspendedAt: datetime | None = Column()
+    suspendedReason: str | None = Column()
 
 
 class CreditGrant(Base, Serializable):
     """A batch of credits from one source. Spending draws from the soonest-expiring grants first."""
 
     __tablename__ = "CreditGrant"
-    id: Mapped[str] = _id()
-    userId: Mapped[str] = _user_fk()
-    source: Mapped[str] = mapped_column(String, nullable=False)  # trial | plan | pack | admin
-    amount: Mapped[int] = mapped_column(Integer, nullable=False)
-    remaining: Mapped[int] = mapped_column(Integer, nullable=False)
-    expiresAt: Mapped[datetime | None] = mapped_column(UTCDateTime)
-    ref: Mapped[str | None] = mapped_column(String, unique=True)  # Stripe invoice / session id, for idempotency
-    createdAt: Mapped[datetime] = _created()
+    id: str = _id()
+    userId: str = _user_fk()
+    source: str = Column()  # trial | plan | pack | admin
+    amount: int = Column()
+    remaining: int = Column()
+    expiresAt: datetime | None = Column()
+    ref: str | None = Column(unique=True)  # Stripe invoice / session id, for idempotency
+    createdAt: datetime = _created()
     __table_args__ = (Index("CreditGrant_userId_expiresAt_idx", "userId", "expiresAt"),)
 
 
@@ -81,135 +79,135 @@ class CreditTransaction(Base, Serializable):
     """Append-only history of every credit movement shown to the user."""
 
     __tablename__ = "CreditTransaction"
-    id: Mapped[str] = _id()
-    userId: Mapped[str] = _user_fk()
-    delta: Mapped[int] = mapped_column(Integer, nullable=False)  # positive = added, negative = spent
-    kind: Mapped[str] = mapped_column(String, nullable=False)  # grant | spend | refund
-    description: Mapped[str] = mapped_column(String, nullable=False)
-    videoId: Mapped[str | None] = mapped_column(String)
-    allocJson: Mapped[str | None] = mapped_column(String)  # spend: [{grantId, amount}] for refunds
-    refundedAt: Mapped[datetime | None] = mapped_column(UTCDateTime)
-    createdAt: Mapped[datetime] = _created()
+    id: str = _id()
+    userId: str = _user_fk()
+    delta: int = Column()  # positive = added, negative = spent
+    kind: str = Column()  # grant | spend | refund
+    description: str = Column()
+    videoId: str | None = Column()
+    allocJson: str | None = Column()  # spend: [{grantId, amount}] for refunds
+    refundedAt: datetime | None = Column()
+    createdAt: datetime = _created()
     __table_args__ = (Index("CreditTransaction_userId_createdAt_idx", "userId", "createdAt"),)
 
 
 class Video(Base, Serializable):
     __tablename__ = "Video"
-    id: Mapped[str] = _id()
-    userId: Mapped[str] = _user_fk()
-    sourceUrl: Mapped[str] = mapped_column(String, nullable=False)
-    platform: Mapped[str] = mapped_column(String, nullable=False)  # youtube | vimeo | direct
-    externalId: Mapped[str | None] = mapped_column(String)
-    title: Mapped[str] = mapped_column(String, nullable=False)
-    description: Mapped[str] = mapped_column(String, nullable=False, default="")
-    author: Mapped[str | None] = mapped_column(String)
-    durationSec: Mapped[float | None] = mapped_column(Float)
-    thumbnailUrl: Mapped[str | None] = mapped_column(String)
-    createdAt: Mapped[datetime] = _created()
-    updatedAt: Mapped[datetime] = _updated()
+    id: str = _id()
+    userId: str = _user_fk()
+    sourceUrl: str = Column()
+    platform: str = Column()  # youtube | vimeo | direct
+    externalId: str | None = Column()
+    title: str = Column()
+    description: str = Column(default="")
+    author: str | None = Column()
+    durationSec: float | None = Column()
+    thumbnailUrl: str | None = Column()
+    createdAt: datetime = _created()
+    updatedAt: datetime = _updated()
     # Captions / transcript
-    captionStatus: Mapped[str] = mapped_column(String, nullable=False, default="pending")
-    captionSource: Mapped[str | None] = mapped_column(String)
-    captionTiming: Mapped[str | None] = mapped_column(String)  # exact | estimated
-    captionLanguage: Mapped[str | None] = mapped_column(String)
-    captionNote: Mapped[str | None] = mapped_column(String)
-    transcriptJson: Mapped[str | None] = mapped_column(Text)
+    captionStatus: str = Column(default="pending")
+    captionSource: str | None = Column()
+    captionTiming: str | None = Column()  # exact | estimated
+    captionLanguage: str | None = Column()
+    captionNote: str | None = Column()
+    transcriptJson: str | None = Column()
     # AI analysis
-    analysisStatus: Mapped[str] = mapped_column(String, nullable=False, default="idle")
-    analysisCount: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    analysisFocus: Mapped[str] = mapped_column(String, nullable=False, default="auto")
+    analysisStatus: str = Column(default="idle")
+    analysisCount: int = Column(default=0)
+    analysisFocus: str = Column(default="auto")
     # Picked on import: podcast | gaming | movies | sports | other. Chooses the AI engine (app/ai/engines.py).
-    category: Mapped[str] = mapped_column(String, nullable=False, default="other", server_default="other")
-    analysisError: Mapped[str | None] = mapped_column(String)
-    analyzedAt: Mapped[datetime | None] = mapped_column(UTCDateTime)
-    summary: Mapped[str | None] = mapped_column(String)
+    category: str = Column(default="other")
+    analysisError: str | None = Column()
+    analyzedAt: datetime | None = Column()
+    summary: str | None = Column()
 
-    clips: Mapped[list[Clip]] = relationship(back_populates="video", passive_deletes=True)
+    clips: list[Clip] = relationship("Clip", local="id", remote="videoId", many=True)
     __table_args__ = (Index("Video_userId_createdAt_idx", "userId", "createdAt"),)
 
 
 class Clip(Base, Serializable):
     __tablename__ = "Clip"
-    id: Mapped[str] = _id()
-    userId: Mapped[str] = _user_fk()
-    videoId: Mapped[str] = mapped_column(String, ForeignKey("Video.id", ondelete="CASCADE", onupdate="CASCADE"), nullable=False)
-    createdAt: Mapped[datetime] = _created()
-    updatedAt: Mapped[datetime] = _updated()
-    title: Mapped[str] = mapped_column(String, nullable=False)
-    startSec: Mapped[float] = mapped_column(Float, nullable=False)
-    endSec: Mapped[float] = mapped_column(Float, nullable=False)
-    status: Mapped[str] = mapped_column(String, nullable=False, default="idea")  # idea | draft | ready | published
-    origin: Mapped[str] = mapped_column(String, nullable=False, default="ai")  # ai | manual
-    category: Mapped[str | None] = mapped_column(String)
-    momentLabel: Mapped[str | None] = mapped_column(String)  # "Goal event", "Clutch play" ... from the category engine
-    score: Mapped[int | None] = mapped_column(Integer)
-    scoreHook: Mapped[int | None] = mapped_column(Integer)
-    scoreSelf: Mapped[int | None] = mapped_column(Integer)
-    scorePayoff: Mapped[int | None] = mapped_column(Integer)
-    scoreQuote: Mapped[int | None] = mapped_column(Integer)
-    reason: Mapped[str | None] = mapped_column(String)
-    hook: Mapped[str] = mapped_column(String, nullable=False, default="")
-    caption: Mapped[str] = mapped_column(String, nullable=False, default="")
-    hashtags: Mapped[str] = mapped_column(String, nullable=False, default="")
-    notes: Mapped[str] = mapped_column(String, nullable=False, default="")
-    transcript: Mapped[str] = mapped_column(String, nullable=False, default="")
-    suggestionsJson: Mapped[str | None] = mapped_column(String)
+    id: str = _id()
+    userId: str = _user_fk()
+    videoId: str = Column(fk=("Video", "CASCADE"))
+    createdAt: datetime = _created()
+    updatedAt: datetime = _updated()
+    title: str = Column()
+    startSec: float = Column()
+    endSec: float = Column()
+    status: str = Column(default="idea")  # idea | draft | ready | published
+    origin: str = Column(default="ai")  # ai | manual
+    category: str | None = Column()
+    momentLabel: str | None = Column()  # "Goal event", "Clutch play" ... from the category engine
+    score: int | None = Column()
+    scoreHook: int | None = Column()
+    scoreSelf: int | None = Column()
+    scorePayoff: int | None = Column()
+    scoreQuote: int | None = Column()
+    reason: str | None = Column()
+    hook: str = Column(default="")
+    caption: str = Column(default="")
+    hashtags: str = Column(default="")
+    notes: str = Column(default="")
+    transcript: str = Column(default="")
+    suggestionsJson: str | None = Column()
 
-    video: Mapped[Video] = relationship(back_populates="clips")
-    posts: Mapped[list[Post]] = relationship(back_populates="clip", passive_deletes=True)
+    video: Video = relationship("Video", local="videoId")
+    posts: list[Post] = relationship("Post", local="id", remote="clipId", many=True)
     __table_args__ = (Index("Clip_userId_score_idx", "userId", "score"), Index("Clip_videoId_idx", "videoId"))
 
 
 class SocialAccount(Base, Serializable):
     __tablename__ = "SocialAccount"
-    id: Mapped[str] = _id()
-    userId: Mapped[str] = _user_fk()
-    platform: Mapped[str] = mapped_column(String, nullable=False)
-    externalId: Mapped[str] = mapped_column(String, nullable=False)
-    displayName: Mapped[str] = mapped_column(String, nullable=False)
-    username: Mapped[str | None] = mapped_column(String)
-    avatarUrl: Mapped[str | None] = mapped_column(String)
-    accessTokenEnc: Mapped[str] = mapped_column(String, nullable=False)
-    refreshTokenEnc: Mapped[str | None] = mapped_column(String)
-    tokenExpiresAt: Mapped[datetime | None] = mapped_column(UTCDateTime)
-    metaJson: Mapped[str | None] = mapped_column(String)
-    status: Mapped[str] = mapped_column(String, nullable=False, default="active")  # active | expired | revoked
-    createdAt: Mapped[datetime] = _created()
-    updatedAt: Mapped[datetime] = _updated()
+    id: str = _id()
+    userId: str = _user_fk()
+    platform: str = Column()
+    externalId: str = Column()
+    displayName: str = Column()
+    username: str | None = Column()
+    avatarUrl: str | None = Column()
+    accessTokenEnc: str = Column()
+    refreshTokenEnc: str | None = Column()
+    tokenExpiresAt: datetime | None = Column()
+    metaJson: str | None = Column()
+    status: str = Column(default="active")  # active | expired | revoked
+    createdAt: datetime = _created()
+    updatedAt: datetime = _updated()
     __table_args__ = (UniqueConstraint("userId", "platform", "externalId", name="SocialAccount_userId_platform_externalId_key"),)
 
 
 class Post(Base, Serializable):
     __tablename__ = "Post"
-    id: Mapped[str] = _id()
-    userId: Mapped[str] = _user_fk()
-    clipId: Mapped[str] = mapped_column(String, ForeignKey("Clip.id", ondelete="CASCADE", onupdate="CASCADE"), nullable=False)
-    accountId: Mapped[str | None] = mapped_column(String, ForeignKey("SocialAccount.id", ondelete="SET NULL", onupdate="CASCADE"))
-    accountName: Mapped[str] = mapped_column(String, nullable=False, default="")
-    platform: Mapped[str] = mapped_column(String, nullable=False)
-    text: Mapped[str] = mapped_column(String, nullable=False)
-    status: Mapped[str] = mapped_column(String, nullable=False, default="queued")
-    scheduledAt: Mapped[datetime | None] = mapped_column(UTCDateTime)
-    publishedAt: Mapped[datetime | None] = mapped_column(UTCDateTime)
-    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    externalId: Mapped[str | None] = mapped_column(String)
-    liveUrl: Mapped[str | None] = mapped_column(String)
-    error: Mapped[str | None] = mapped_column(String)
-    createdAt: Mapped[datetime] = _created()
-    updatedAt: Mapped[datetime] = _updated()
+    id: str = _id()
+    userId: str = _user_fk()
+    clipId: str = Column(fk=("Clip", "CASCADE"))
+    accountId: str | None = Column(fk=("SocialAccount", "SET NULL"))
+    accountName: str = Column(default="")
+    platform: str = Column()
+    text: str = Column()
+    status: str = Column(default="queued")
+    scheduledAt: datetime | None = Column()
+    publishedAt: datetime | None = Column()
+    attempts: int = Column(default=0)
+    externalId: str | None = Column()
+    liveUrl: str | None = Column()
+    error: str | None = Column()
+    createdAt: datetime = _created()
+    updatedAt: datetime = _updated()
     # YouTube uploads: resumable session (server-side only) and requested visibility
-    uploadUrl: Mapped[str | None] = mapped_column(String)
-    uploadSize: Mapped[int | None] = mapped_column(Integer)
-    privacy: Mapped[str | None] = mapped_column(String)
+    uploadUrl: str | None = Column()
+    uploadSize: int | None = Column()
+    privacy: str | None = Column()
     # Live post stats
-    views: Mapped[int | None] = mapped_column(Integer)
-    likes: Mapped[int | None] = mapped_column(Integer)
-    comments: Mapped[int | None] = mapped_column(Integer)
-    shares: Mapped[int | None] = mapped_column(Integer)
-    statsUpdatedAt: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    views: int | None = Column()
+    likes: int | None = Column()
+    comments: int | None = Column()
+    shares: int | None = Column()
+    statsUpdatedAt: datetime | None = Column()
 
-    clip: Mapped[Clip] = relationship(back_populates="posts")
-    account: Mapped[SocialAccount | None] = relationship()
+    clip: Clip = relationship("Clip", local="clipId")
+    account: SocialAccount | None = relationship("SocialAccount", local="accountId")
     __table_args__ = (
         Index("Post_status_scheduledAt_idx", "status", "scheduledAt"),
         Index("Post_userId_createdAt_idx", "userId", "createdAt"),
@@ -218,78 +216,78 @@ class Post(Base, Serializable):
 
 class OAuthState(Base):
     __tablename__ = "OAuthState"
-    id: Mapped[str] = mapped_column(String, primary_key=True)  # random state value
-    userId: Mapped[str] = mapped_column(String, nullable=False)
-    platform: Mapped[str] = mapped_column(String, nullable=False)
-    verifier: Mapped[str | None] = mapped_column(String)  # PKCE code verifier
-    popup: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    createdAt: Mapped[datetime] = _created()
+    id: str = Column(primary_key=True)  # random state value
+    userId: str = Column()
+    platform: str = Column()
+    verifier: str | None = Column()  # PKCE code verifier
+    popup: bool = Column(default=False)
+    createdAt: datetime = _created()
 
 
 class IntegrationSetting(Base):
     """Developer-app credentials entered by an admin in the app (override environment variables)."""
 
     __tablename__ = "IntegrationSetting"
-    id: Mapped[str] = mapped_column(String, primary_key=True)  # meta | google
-    clientId: Mapped[str] = mapped_column(String, nullable=False)
-    clientSecretEnc: Mapped[str | None] = mapped_column(String)
-    updatedAt: Mapped[datetime] = _updated()
+    id: str = Column(primary_key=True)  # meta | google
+    clientId: str = Column()
+    clientSecretEnc: str | None = Column()
+    updatedAt: datetime = _updated()
 
 
 class UsageEvent(Base):
     __tablename__ = "UsageEvent"
-    id: Mapped[str] = _id()
-    userId: Mapped[str] = _user_fk()
-    kind: Mapped[str] = mapped_column(String, nullable=False)
-    createdAt: Mapped[datetime] = _created()
+    id: str = _id()
+    userId: str = _user_fk()
+    kind: str = Column()
+    createdAt: datetime = _created()
     __table_args__ = (Index("UsageEvent_userId_kind_createdAt_idx", "userId", "kind", "createdAt"),)
 
 
 class Lead(Base, Serializable):
     __tablename__ = "Lead"
-    id: Mapped[str] = _id()
-    email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
-    source: Mapped[str] = mapped_column(String, nullable=False, default="landing-hero")
-    utmSource: Mapped[str | None] = mapped_column(String)
-    utmMedium: Mapped[str | None] = mapped_column(String)
-    utmCampaign: Mapped[str | None] = mapped_column(String)
-    referrer: Mapped[str | None] = mapped_column(String)
-    userAgent: Mapped[str | None] = mapped_column(String)
-    createdAt: Mapped[datetime] = _created()
-    updatedAt: Mapped[datetime] = _updated()
-    signups: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    id: str = _id()
+    email: str = Column(unique=True)
+    source: str = Column(default="landing-hero")
+    utmSource: str | None = Column()
+    utmMedium: str | None = Column()
+    utmCampaign: str | None = Column()
+    referrer: str | None = Column()
+    userAgent: str | None = Column()
+    createdAt: datetime = _created()
+    updatedAt: datetime = _updated()
+    signups: int = Column(default=1)
 
 
 class ProcessedWebhook(Base):
     __tablename__ = "ProcessedWebhook"
-    id: Mapped[str] = mapped_column(String, primary_key=True)  # Stripe event id, for idempotency
-    createdAt: Mapped[datetime] = _created()
+    id: str = Column(primary_key=True)  # Stripe event id, for idempotency
+    createdAt: datetime = _created()
 
 
 class PasswordReset(Base):
     """A one-time password-reset link. Only a hash of the token is stored."""
 
     __tablename__ = "PasswordReset"
-    id: Mapped[str] = _id()
-    userId: Mapped[str] = _user_fk()
-    tokenHash: Mapped[str] = mapped_column(String, unique=True, nullable=False)
-    expiresAt: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
-    usedAt: Mapped[datetime | None] = mapped_column(UTCDateTime)
-    createdAt: Mapped[datetime] = _created()
+    id: str = _id()
+    userId: str = _user_fk()
+    tokenHash: str = Column(unique=True)
+    expiresAt: datetime = Column()
+    usedAt: datetime | None = Column()
+    createdAt: datetime = _created()
 
 
 class ContactMessage(Base, Serializable):
     """A message sent from the landing site's contact form."""
 
     __tablename__ = "ContactMessage"
-    id: Mapped[str] = _id()
-    name: Mapped[str] = mapped_column(String, nullable=False)
-    email: Mapped[str] = mapped_column(String, nullable=False)
-    topic: Mapped[str] = mapped_column(String, nullable=False, default="general")
-    message: Mapped[str] = mapped_column(Text, nullable=False)
-    userAgent: Mapped[str | None] = mapped_column(String)
-    handled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
-    createdAt: Mapped[datetime] = _created()
+    id: str = _id()
+    name: str = Column()
+    email: str = Column()
+    topic: str = Column(default="general")
+    message: str = Column()
+    userAgent: str | None = Column()
+    handled: bool = Column(default=False)
+    createdAt: datetime = _created()
     __table_args__ = (Index("ContactMessage_createdAt_idx", "createdAt"),)
 
 
@@ -301,28 +299,28 @@ class AdminTotp(Base):
     """
 
     __tablename__ = "AdminTotp"
-    userId: Mapped[str] = mapped_column(String, ForeignKey("User.id", ondelete="CASCADE", onupdate="CASCADE"), primary_key=True)
-    secretEnc: Mapped[str | None] = mapped_column(String)
-    pendingSecretEnc: Mapped[str | None] = mapped_column(String)
-    enabledAt: Mapped[datetime | None] = mapped_column(UTCDateTime)
-    lastStep: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    userId: str = Column(primary_key=True, fk=("User", "CASCADE"))
+    secretEnc: str | None = Column()
+    pendingSecretEnc: str | None = Column()
+    enabledAt: datetime | None = Column()
+    lastStep: int = Column(default=0)
     # Bumped when the authenticator is replaced: signs out every other portal session.
-    sessionVersion: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
-    updatedAt: Mapped[datetime] = _updated()
+    sessionVersion: int = Column(default=0)
+    updatedAt: datetime = _updated()
 
 
 class AdminAudit(Base, Serializable):
     """Append-only record of what admins did in the portal (sign-ins, credit grants, suspensions)."""
 
     __tablename__ = "AdminAudit"
-    id: Mapped[str] = _id()
-    adminId: Mapped[str | None] = mapped_column(String, ForeignKey("User.id", ondelete="SET NULL", onupdate="CASCADE"))
-    adminEmail: Mapped[str] = mapped_column(String, nullable=False)
-    action: Mapped[str] = mapped_column(String, nullable=False)
-    targetUserId: Mapped[str | None] = mapped_column(String, ForeignKey("User.id", ondelete="SET NULL", onupdate="CASCADE"))
-    detail: Mapped[str | None] = mapped_column(String)
-    ip: Mapped[str | None] = mapped_column(String)
-    createdAt: Mapped[datetime] = _created()
+    id: str = _id()
+    adminId: str | None = Column(fk=("User", "SET NULL"))
+    adminEmail: str = Column()
+    action: str = Column()
+    targetUserId: str | None = Column(fk=("User", "SET NULL"))
+    detail: str | None = Column()
+    ip: str | None = Column()
+    createdAt: datetime = _created()
     __table_args__ = (
         Index("AdminAudit_createdAt_idx", "createdAt"),
         Index("AdminAudit_targetUserId_createdAt_idx", "targetUserId", "createdAt"),
@@ -333,8 +331,8 @@ class RevokedSession(Base):
     """App sessions ended by signing out. Kept until the token would have expired anyway."""
 
     __tablename__ = "RevokedSession"
-    jti: Mapped[str] = mapped_column(String, primary_key=True)
-    expiresAt: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+    jti: str = Column(primary_key=True)
+    expiresAt: datetime = Column()
     __table_args__ = (Index("RevokedSession_expiresAt_idx", "expiresAt"),)
 
 
@@ -345,9 +343,53 @@ class UserTwoFactor(Base):
     """
 
     __tablename__ = "UserTwoFactor"
-    userId: Mapped[str] = mapped_column(String, ForeignKey("User.id", ondelete="CASCADE", onupdate="CASCADE"), primary_key=True)
-    secretEnc: Mapped[str | None] = mapped_column(String)
-    pendingSecretEnc: Mapped[str | None] = mapped_column(String)
-    enabledAt: Mapped[datetime | None] = mapped_column(UTCDateTime)
-    lastStep: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
-    recoveryHashes: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    userId: str = Column(primary_key=True, fk=("User", "CASCADE"))
+    secretEnc: str | None = Column()
+    pendingSecretEnc: str | None = Column()
+    enabledAt: datetime | None = Column()
+    lastStep: int = Column(default=0)
+    recoveryHashes: str = Column(default="")
+
+
+class Payment(Base, Serializable):
+    """Money that moved through Stripe: plan invoices (new and renewal), credit packs, failures and refunds.
+
+    `ref` is the Stripe invoice or checkout session id (unique: retried webhooks update, never duplicate);
+    `paymentIntent` lets a refund find its payment. `live` is False for local test grants and backfilled
+    history. `amountCents` is None when the amount wasn't recorded (purchases from before this table).
+    """
+
+    __tablename__ = "Payment"
+    id: str = _id()
+    userId: str | None = Column(fk=("User", "SET NULL"))
+    email: str | None = Column()  # kept when the account is deleted
+    kind: str = Column()  # plan | pack
+    status: str = Column()  # paid | failed | refunded | partially_refunded
+    amountCents: int | None = Column()
+    refundedCents: int = Column(default=0)
+    currency: str = Column(default="usd")
+    description: str = Column()
+    ref: str = Column(unique=True)
+    paymentIntent: str | None = Column(index=True)
+    live: bool = Column(default=True)
+    tags: str = Column(default="")  # admin labels, comma-separated
+    createdAt: datetime = _created()
+    updatedAt: datetime = _updated()
+    __table_args__ = (Index("Payment_createdAt_idx", "createdAt"), Index("Payment_userId_createdAt_idx", "userId", "createdAt"))
+
+
+class AiUsage(Base):
+    """One AI model request: which model, what for, the tokens Google billed, and the cost at the
+    prices set in GEMINI_PRICES (None when no price is set for that model)."""
+
+    __tablename__ = "AiUsage"
+    id: str = _id()
+    model: str = Column()
+    purpose: str = Column()  # analysis | suggest | fetch
+    inputTokens: int = Column(default=0)
+    outputTokens: int = Column(default=0)  # includes thinking
+    thinkingTokens: int = Column(default=0)
+    cachedTokens: int = Column(default=0)
+    costMicros: int | None = Column()  # US dollars × 1,000,000
+    createdAt: datetime = _created()
+    __table_args__ = (Index("AiUsage_createdAt_idx", "createdAt"),)

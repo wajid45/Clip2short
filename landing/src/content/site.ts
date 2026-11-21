@@ -17,7 +17,7 @@ export const USE_CASES: UseCase[] = [
   {
     slug: "streamers",
     title: "Streamers and clippers",
-    tagline: "Marathon VODs into daily Shorts",
+    tagline: "Marathon VODs into daily bangers",
     intro:
       "Drop a six-hour stream and get a ranked shortlist of the plays, fails and reactions worth posting while the stream is still trending.",
     engines: ["gaming", "sports", "other"],
@@ -29,7 +29,7 @@ export const USE_CASES: UseCase[] = [
     steps: [
       { title: "Pick Gaming and paste the VOD", body: "The gaming engine reads the stream through the streamer's reactions: the shout, the laugh, the panic narration." },
       { title: "Get a ranked shortlist", body: "Clutch plays, wins, fails and chat moments, each with a score, a label and a plain-English reason." },
-      { title: "Trim to the frame", body: "Nudge in and out points, keep the build-up and the reaction, export vertical 9:16 for video files." },
+      { title: "Keep the build-up and the payoff", body: "Nudge in and out points, keep the build-up and the reaction, export vertical 9:16 for video files." },
       { title: "Post while it's trending", body: "Publish to YouTube Shorts, Instagram Reels and Facebook now, or schedule the next 15-minute slot." },
     ],
     points: ["Main events focus for gameplay", "Clip what chat reacted to", "Post the best moment first"],
@@ -37,7 +37,7 @@ export const USE_CASES: UseCase[] = [
   {
     slug: "podcasters",
     title: "Podcasters",
-    tagline: "Episodes into quotable Reels",
+    tagline: "Episodes into Reels that go off",
     intro: "Find the lines people will repeat. Every pick comes with a hook, a caption and the reason it was chosen.",
     engines: ["podcast", "other"],
     pains: [
@@ -56,7 +56,7 @@ export const USE_CASES: UseCase[] = [
   {
     slug: "agencies",
     title: "Agencies and editors",
-    tagline: "Many channels, one queue",
+    tagline: "Many channels, one queue, zero chaos",
     intro: "Connect up to 40 accounts, schedule a week of posts in an afternoon and see what performed across every channel.",
     engines: ["podcast", "gaming", "sports", "movies", "other"],
     pains: [
@@ -77,7 +77,7 @@ export const USE_CASES: UseCase[] = [
 /* ── Integrations ───────────────────────────────────────────────────────── */
 
 export const IMPORT_SOURCES = [
-  { name: "YouTube", body: "Public and unlisted videos and VODs. Shortlark reads the title, length and captions; it never downloads the video." },
+  { name: "YouTube", body: "Public and unlisted videos and VODs. Clip2Short reads the title, length and captions; it never downloads the video." },
   { name: "Vimeo", body: "Public videos, and private ones shared with their link. Text tracks are used as captions when present." },
   { name: "Video files", body: "Direct links to .mp4 and .webm files. These can be cut and downloaded as MP4, original shape or vertical 9:16." },
 ];
@@ -120,7 +120,7 @@ export const CHANGELOG: { date: string; title: string; items: string[] }[] = [
     title: "New look and admin tools",
     items: [
       "A redesigned site and app with a white theme and orange accents.",
-      "A separate admin console with authenticator sign-in for the Shortlark team.",
+      "A separate admin console with authenticator sign-in for the Clip2Short team.",
       "Accounts can be suspended and credits granted with a note you can see in Billing.",
     ],
   },
@@ -137,7 +137,7 @@ export const CHANGELOG: { date: string; title: string; items: string[] }[] = [
     date: "November 2026",
     title: "Faster, more reliable analysis",
     items: [
-      "The AI now runs on Google Gemini with structured output, so moments come back in a consistent shape.",
+      "The AI model now returns structured output, so moments come back in a consistent shape.",
       "Failed analyses refund their credits automatically and explain what went wrong.",
     ],
   },
@@ -198,7 +198,7 @@ export const GUIDES: Guide[] = [
       {
         heading: "Credit clearly",
         paragraphs: [
-          "Name the creator in the caption and link the original when the network allows it. Shortlark posts YouTube and Vimeo clips with a link that opens the original at the right second, which sends viewers back to the source.",
+          "Name the creator in the caption and link the original when the network allows it. Clip2Short posts YouTube and Vimeo clips with a link that opens the original at the right second, which sends viewers back to the source.",
         ],
       },
       {
@@ -231,7 +231,7 @@ export const GUIDES: Guide[] = [
       {
         heading: "Let the transcript do the work",
         paragraphs: [
-          "The best hooks are usually already in the transcript. Shortlark drafts the hook from the clip's actual opening words and writes captions from what was said, so you edit rather than start from a blank box.",
+          "The best hooks are usually already in the transcript. Clip2Short drafts the hook from the clip's actual opening words and writes captions from what was said, so you edit rather than start from a blank box.",
         ],
       },
     ],

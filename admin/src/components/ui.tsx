@@ -1,6 +1,8 @@
 import clsx from "clsx";
+import { FlashToast } from "@shortlark/shared/components/flash-toast";
 import { useEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
 import { PasswordToggle } from "@shortlark/shared/components/password-toggle";
+import { IconRefresh } from "@shortlark/shared/components/icons";
 import { Sparkline } from "./charts";
 
 export const cx = clsx;
@@ -18,11 +20,11 @@ export function Button({
       {...rest}
       disabled={rest.disabled || loading}
       className={cx(
-        "inline-flex items-center justify-center gap-2 rounded-lg font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-55",
+        "inline-flex items-center justify-center gap-2 rounded-lg font-normal whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-55",
         size === "sm" ? "h-8 px-3 text-[13px]" : "h-10 px-4 text-sm",
         variant === "primary" && "bg-signal text-on-signal hover:bg-signal-strong",
         variant === "secondary" && "border border-line bg-surface-2 text-text hover:border-line-strong hover:bg-surface-3",
-        variant === "ghost" && "text-muted hover:bg-surface-2 hover:text-text",
+        variant === "ghost" && "text-text hover:bg-surface-2",
         variant === "danger" && "border border-danger/40 text-danger hover:bg-danger/10",
         className,
       )}
@@ -38,7 +40,7 @@ export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
     <input
       {...props}
       className={cx(
-        "h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-text placeholder:text-faint transition-[border-color,box-shadow] hover:border-faint focus:border-signal focus:ring-3 focus:ring-signal/20 focus:outline-none dark:border-[#47474f] dark:bg-surface-2 dark:placeholder:text-muted/75 dark:hover:border-[#5a5a63]",
+        "h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-text placeholder:text-faint transition-[border-color,box-shadow] hover:border-faint focus:border-signal focus:ring-3 focus:ring-signal/20 focus:outline-none dark:border-[#4a4b55] dark:bg-surface-2 dark:placeholder:text-muted/75 dark:hover:border-[#5e5f6b]",
         props.className,
       )}
     />
@@ -59,7 +61,7 @@ export function PasswordInput(props: Omit<InputHTMLAttributes<HTMLInputElement>,
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[13px] font-medium text-text">{label}</span>
+      <span className="mb-1.5 block text-[13px] font-normal text-text">{label}</span>
       {children}
       {hint && <span className="mt-1 block text-xs text-faint">{hint}</span>}
     </label>
@@ -72,7 +74,7 @@ export function Card({ title, description, action, children, className, pad = tr
       {(title || action) && (
         <header className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
           <div>
-            {title && <h2 className="text-[15px] font-semibold text-text">{title}</h2>}
+            {title && <h2 className="text-[15px] font-medium text-text">{title}</h2>}
             {description && <p className="mt-0.5 text-[13px] text-muted">{description}</p>}
           </div>
           {action}
@@ -117,6 +119,7 @@ export function Stat({
   hint,
   tone,
   trend,
+  trendTone = "good",
 }: {
   label: string;
   value: ReactNode;
@@ -124,16 +127,18 @@ export function Stat({
   hint?: ReactNode;
   tone?: keyof typeof TONES;
   trend?: number[];
+  /** Green when more is good news, red when more is bad (failures, suspensions), orange for costs. */
+  trendTone?: "good" | "bad" | "cost";
 }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-line bg-surface p-4">
+    <div className="relative rounded-2xl border border-line bg-surface p-4">
       <div className="flex items-center gap-1.5 text-[12.5px] text-muted">
         {label}
         {hint && <InfoTip text={hint} />}
       </div>
       <div className="mt-2 flex items-end justify-between gap-3">
-        <p className={cx("tc text-[26px] leading-none font-semibold tracking-tight", tone ? TONES[tone] : "text-text")}>{value}</p>
-        {trend && trend.length > 1 && <Sparkline points={trend} />}
+        <p className={cx("num text-[30px] leading-none font-normal tracking-[-0.01em]", tone ? TONES[tone] : "text-text")}>{value}</p>
+        {trend && trend.length > 1 && <Sparkline points={trend} color={trendTone === "good" ? "var(--color-ready)" : trendTone === "bad" ? "var(--color-danger)" : "var(--color-signal)"} />}
       </div>
       {sub && <p className="mt-2 truncate text-xs text-faint">{sub}</p>}
     </div>
@@ -164,9 +169,16 @@ export function PageHeader({
       <div className="flex items-center gap-3">
         {updatedAt && <span className="text-xs text-faint">Updated {new Date(updatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" })}</span>}
         {onRefresh && (
-          <Button size="sm" onClick={onRefresh} loading={loading}>
-            Refresh
-          </Button>
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={loading}
+            aria-label="Refresh"
+            title="Refresh"
+            className="flex size-8 items-center justify-center rounded-lg border border-line bg-surface-2 text-muted transition-colors hover:border-line-strong hover:text-text disabled:cursor-wait"
+          >
+            <IconRefresh size={15} className={loading ? "animate-spin" : undefined} />
+          </button>
         )}
         {action}
       </div>
@@ -176,7 +188,7 @@ export function PageHeader({
 
 export function SectionTitle({ children, hint }: { children: ReactNode; hint?: ReactNode }) {
   return (
-    <h2 className="mt-7 mb-3 flex items-center gap-2 text-[12px] font-semibold tracking-wide text-faint uppercase">
+    <h2 className="mt-7 mb-3 flex items-center gap-2 text-[12px] font-medium tracking-wide text-faint uppercase">
       {children}
       {hint && <InfoTip text={hint} />}
     </h2>
@@ -202,19 +214,8 @@ export function Badge({ children, tone = "neutral", className }: { children: Rea
 }
 
 export function Alert({ kind = "info", children }: { kind?: "info" | "error" | "success"; children: ReactNode }) {
-  return (
-    <div
-      role={kind === "error" ? "alert" : "status"}
-      className={cx(
-        "mb-4 rounded-xl border px-4 py-3 text-sm",
-        kind === "info" && "border-line bg-surface-2 text-muted",
-        kind === "error" && "border-danger/30 bg-danger/10 text-danger",
-        kind === "success" && "border-ready/30 bg-ready/10 text-ready",
-      )}
-    >
-      {children}
-    </div>
-  );
+  if (kind === "success" || kind === "error") return <FlashToast tone={kind}>{children}</FlashToast>; // confirmations and errors are toasts
+  return <div role="status" className={cx("mb-4 rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm text-muted")}>{children}</div>;
 }
 
 export function Spinner({ label = "Loading" }: { label?: string }) {
@@ -229,7 +230,7 @@ export function Spinner({ label = "Loading" }: { label?: string }) {
 export function Empty({ title, body }: { title: string; body?: string }) {
   return (
     <div className="py-12 text-center">
-      <p className="text-sm font-medium text-text">{title}</p>
+      <p className="text-sm font-normal text-text">{title}</p>
       {body && <p className="mt-1 text-[13px] text-muted">{body}</p>}
     </div>
   );
@@ -242,7 +243,7 @@ export function Table({ head, children, minWidth = 720 }: { head: ReactNode[]; c
         <thead>
           <tr className="border-b border-line text-[11.5px] tracking-wide text-faint uppercase">
             {head.map((h, i) => (
-              <th key={i} className="px-4 py-2.5 font-medium whitespace-nowrap">
+              <th key={i} className="px-4 py-2.5 font-normal whitespace-nowrap">
                 {h}
               </th>
             ))}
@@ -307,7 +308,7 @@ export function Modal({ open, onClose, title, children, locked }: { open: boolea
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !locked && onClose()} />
       <div ref={ref} role="dialog" aria-modal="true" className="relative w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-2xl">
-        <h2 className="text-[17px] font-semibold text-text">{title}</h2>
+        <h2 className="text-[17px] font-medium text-text">{title}</h2>
         <div className="mt-4">{children}</div>
       </div>
     </div>

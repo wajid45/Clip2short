@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * Shortlark design tokens.
+ * Clip2Short design tokens.
  * Dark is the default (video tools read best on graphite); light is a clean white theme.
  * Theme = the `data-theme` attribute on <html> (set from the sl_theme cookie), or the
  * system preference when the user picks "System".
@@ -9,23 +9,21 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @theme {
-  /*
-   * Times New Roman throughout. Tinos (Google Fonts, loaded in each index.html) has the same
-   * shapes and metrics, so devices without Times New Roman render identically.
-   */
-  --font-sans: "Times New Roman", Tinos, Times, serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
-  --font-display: "Times New Roman", Tinos, Times, serif;
+  /* Playfair Display throughout (loaded from Google Fonts in each index.html): text, labels and numbers. */
+  --font-sans: "Playfair Display", "Times New Roman", Georgia, serif;
+  --font-mono: "Playfair Display", "Times New Roman", Georgia, serif;
+  --font-display: "Playfair Display", "Times New Roman", Georgia, serif;
 
-  --color-bg: #0c0c0d;
-  --color-surface: #141416;
-  --color-surface-2: #1b1b1f;
-  --color-surface-3: #232328;
-  --color-line: #27272c;
-  --color-line-strong: #36363d;
-  --color-text: #ededef;
-  --color-muted: #9a9aa3;
-  --color-faint: #63636d;
+  /* Dark theme: a soft slate rather than black, so long sessions are easy on the eyes. */
+  --color-bg: #17181d;
+  --color-surface: #1f2026;
+  --color-surface-2: #26272e;
+  --color-surface-3: #2e2f37;
+  --color-line: #31323a;
+  --color-line-strong: #42434c;
+  --color-text: #e9e9ee;
+  --color-muted: #a2a3ad;
+  --color-faint: #747582;
 
   /* Brand: ember orange primary (buttons, links, focus), turquoise for labels, gold for highlights.
      The orange is deep enough for white button text (4.3:1). */
@@ -43,9 +41,9 @@
   --color-published: #4c8dff;
   --color-danger: #f0564a;
 
-  /* Inverted panels (e.g. the dark band on the light landing page). */
-  --color-inverse: #f4f2ee;
-  --color-inverse-text: #121212;
+  /* The closing call-to-action panel. It follows the theme: dark in dark mode, light in light mode. */
+  --color-inverse: #1d1e24;
+  --color-inverse-text: #f4f2ee;
 
   --radius-card: 14px;
 
@@ -132,8 +130,8 @@
     --color-ready: #1b8456;
     --color-published: #2563eb;
     --color-danger: #cf3a2e;
-    --color-inverse: #121212;
-    --color-inverse-text: #f4f2ee;
+    --color-inverse: #f4f2ee;
+    --color-inverse-text: #121212;
   }
   @media (prefers-color-scheme: light) {
     :root:not([data-theme]) {
@@ -156,8 +154,8 @@
       --color-ready: #1b8456;
       --color-published: #2563eb;
       --color-danger: #cf3a2e;
-      --color-inverse: #121212;
-      --color-inverse-text: #f4f2ee;
+      --color-inverse: #f4f2ee;
+      --color-inverse-text: #121212;
     }
   }
 }
@@ -174,7 +172,7 @@ body {
 /* Timecodes always use tabular figures so they don't jitter while playing. */
 .tc {
   font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
   letter-spacing: -0.01em;
 }
 
@@ -183,9 +181,17 @@ body {
   color: #fff;
 }
 
-:focus-visible:not(.no-ring) {
-  outline: 2px solid var(--color-signal);
-  outline-offset: 2px;
+@layer base {
+  /* Typed text stays in plain Arial: easy to read and check while typing. Labels and buttons keep Playfair. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea {
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  :focus-visible:not(.no-ring) {
+    outline: 2px solid var(--color-signal);
+    outline-offset: 2px;
+  }
 }
 
 input[type="datetime-local"]::-webkit-calendar-picker-indicator {
@@ -222,5 +228,33 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Aurora backdrop (components/aurora-backdrop.tsx): the floor fades the horizon behind small text.
+   Dark mode needs a deeper fade, because there the horizon is the brightest thing on the page. */
+.aurora-floor {
+  --aurora-floor: color-mix(in srgb, var(--color-bg) 90%, transparent);
+  --aurora-floor-mid: color-mix(in srgb, var(--color-bg) 66%, transparent);
+  background: linear-gradient(0deg, var(--aurora-floor) 0%, var(--aurora-floor-mid) 26%, transparent 50%);
+}
+:root[data-theme="light"] .aurora-floor {
+  --aurora-floor: color-mix(in srgb, var(--color-bg) 55%, transparent);
+  --aurora-floor-mid: color-mix(in srgb, var(--color-bg) 25%, transparent);
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) .aurora-floor {
+    --aurora-floor: color-mix(in srgb, var(--color-bg) 55%, transparent);
+    --aurora-floor-mid: color-mix(in srgb, var(--color-bg) 25%, transparent);
+  }
+}
+
+/* Sign-in pages (web app and admin): in dark mode, grey text reads as white over the aurora. */
+:root[data-theme="dark"] .auth-page :is(.text-muted, .text-faint) {
+  color: var(--color-text);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .auth-page :is(.text-muted, .text-faint) {
+    color: var(--color-text);
   }
 }

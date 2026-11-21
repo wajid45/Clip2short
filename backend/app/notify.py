@@ -13,7 +13,7 @@ from .email import send_clips_ready, send_low_credits, send_security_notice, sen
 from .models import User
 from .plans import TRIAL
 
-log = logging.getLogger("shortlark.notify")
+log = logging.getLogger("clip2short.notify")
 
 LOW_CREDITS = 30  # warn once the balance drops below this many credits
 
@@ -66,7 +66,7 @@ def password_changed(user_id: str) -> None:
             u.email,
             u.name,
             "Your password was changed",
-            "The password for your Shortlark account was just changed, and other devices were signed out.",
+            "The password for your Clip2Short account was just changed, and other devices were signed out.",
             f"{settings.app_url}/forgot-password",
         )
     except Exception:
@@ -92,7 +92,7 @@ def email_changed(old_email: str, name: str | None, new_email: str) -> None:
             old_email,
             name,
             "Your sign-in email was changed",
-            f"The email for your Shortlark account was changed from this address to {masked}.",
+            f"The email for your Clip2Short account was changed from this address to {masked}.",
             f"{settings.landing_url}/contact",
         )
     except Exception:

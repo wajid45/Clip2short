@@ -1,7 +1,7 @@
 import clsx from "clsx";
 
 /**
- * Shortlark mark: a lark in flight sweeping through a play button, orange to red.
+ * Clip2Short mark: a lark in flight sweeping through a play button, orange to red.
  * Transparent PNG so it sits on both the light and dark themes.
  */
 export function LogoMark({ size = 24, className }: { size?: number; className?: string }) {
@@ -24,7 +24,7 @@ export function Logo({ className, size = 26, compact = false }: { className?: st
       <LogoMark size={size} />
       {!compact && (
         <span className="font-semibold tracking-[-0.035em] text-text" style={{ fontSize: Math.round(size * 0.72) }}>
-          shortlark
+          clip<span style={{ fontSize: "1.18em" }}>2</span>short
         </span>
       )}
     </span>

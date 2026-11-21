@@ -128,13 +128,13 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         {mode === "signup" ? "Create account" : "Sign in"}
       </Button>
       {mode === "signup" && (
-        <p className="text-center text-xs leading-relaxed text-faint">
+        <p className="text-center text-[13px] leading-relaxed text-muted">
           By creating an account you agree to the{" "}
-          <a href={landingHref("/terms")} target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-text">
+          <a href={landingHref("/terms")} target="_blank" rel="noopener" className="font-medium text-text underline underline-offset-2 hover:text-signal">
             Terms
           </a>{" "}
           and{" "}
-          <a href={landingHref("/privacy")} target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-text">
+          <a href={landingHref("/privacy")} target="_blank" rel="noopener" className="font-medium text-text underline underline-offset-2 hover:text-signal">
             Privacy policy
           </a>
           .
@@ -150,7 +150,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           </>
         ) : (
           <>
-            New to Shortlark?{" "}
+            New to Clip2Short?{" "}
             <Link href={withParams("/signup")} className={switchLink}>
               Create an account
             </Link>
@@ -214,7 +214,7 @@ function CodeStep({ challenge, onDone, onRestart }: { challenge: string; onDone:
           className={backup ? "tc" : "tc text-center text-lg tracking-[0.4em]"}
         />
         <p className="mt-1.5 text-xs leading-relaxed text-faint">
-          {backup ? "Each backup code works once." : "Open your authenticator app and type the code shown for Shortlark."}
+          {backup ? "Each backup code works once." : "Open your authenticator app and type the code shown for Clip2Short."}
         </p>
       </div>
       {error && <Notice tone="error">{error}</Notice>}
@@ -233,7 +233,7 @@ function CodeStep({ challenge, onDone, onRestart }: { challenge: string; onDone:
         >
           {backup ? "Use my authenticator app" : "Lost your phone? Use a backup code"}
         </button>
-        <button type="button" className="font-semibold text-signal hover:text-signal-strong hover:underline" onClick={() => onRestart()}>
+        <button type="button" className="font-semibold text-signal hover:text-signal-strong hover:underline dark:text-text dark:hover:text-signal" onClick={() => onRestart()}>
           Use a different account
         </button>
       </div>

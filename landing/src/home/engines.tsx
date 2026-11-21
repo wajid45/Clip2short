@@ -56,9 +56,6 @@ export function Engines() {
             </p>
             <SplitRise as="h2" className="display mt-4 text-[clamp(40px,5.4vw,84px)]" parts={["One engine for\neach kind of video"]} />
           </div>
-          <p className="max-w-md text-[18px] leading-relaxed text-muted lg:justify-self-end">
-            A goal is not a punchline. Pick the category when you paste a link and Shortlark runs an engine tuned for it: its own model, its own idea of a highlight, and the right clip length.
-          </p>
         </div>
 
         <div className="mt-14 grid gap-4 lg:grid-cols-[0.9fr_1.3fr]" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>

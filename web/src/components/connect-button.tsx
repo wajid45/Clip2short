@@ -1,4 +1,5 @@
 import { useRouter } from "@/lib/nav";
+import { apiUrl } from "@/lib/client";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "./ui";
 
@@ -30,16 +31,16 @@ export function ConnectButton({
     const h = 700;
     const left = window.screenX + (window.outerWidth - w) / 2;
     const top = window.screenY + (window.outerHeight - h) / 2;
-    const url = `/api/social/connect/${platform}?popup=1`;
-    const popup = window.open(url, `shortlark-connect-${platform}`, `width=${w},height=${h},left=${left},top=${top},popup=yes`);
+    const url = apiUrl(`/api/social/connect/${platform}?popup=1`);
+    const popup = window.open(url, `clip2short-connect-${platform}`, `width=${w},height=${h},left=${left},top=${top},popup=yes`);
     if (!popup) {
-      window.location.href = `/api/social/connect/${platform}`;
+      window.location.href = apiUrl(`/api/social/connect/${platform}`);
       return;
     }
     setWaiting(true);
 
     const onMessage = (e: MessageEvent) => {
-      if (e.origin !== window.location.origin || e.data?.type !== "shortlark:oauth") return;
+      if (e.origin !== window.location.origin || e.data?.type !== "clip2short:oauth") return;
       cleanup();
       const ok = Boolean(e.data.ok);
       const message = String(e.data.message ?? "");

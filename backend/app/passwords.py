@@ -27,7 +27,7 @@ import httpx
 
 from .config import settings
 
-log = logging.getLogger("shortlark.passwords")
+log = logging.getLogger("clip2short.passwords")
 
 MIN_LENGTH = 12
 MAX_LENGTH = 128
@@ -52,7 +52,7 @@ _COMMON = {
     "january2026!", "correcthorsebatterystaple", "thisismypassword", "letmeinplease", "iloveyouforever",
 }
 _COMMON_STEMS = {st for c in _COMMON if len(st := re.sub(r"[^a-z]", "", c)) >= 6}
-_SITE_WORDS = ("shortlark", "clipflow")
+_SITE_WORDS = ("clip2short", "clipflow")
 
 
 def normalize(password: str) -> str:
@@ -72,7 +72,7 @@ def _breached(password: str) -> bool:
     try:
         res = httpx.get(
             f"https://api.pwnedpasswords.com/range/{prefix}",
-            headers={"Add-Padding": "true", "User-Agent": "Shortlark-password-check"},
+            headers={"Add-Padding": "true", "User-Agent": "Clip2Short-password-check"},
             timeout=3,
         )
         res.raise_for_status()
@@ -99,13 +99,14 @@ def password_problem(password: str, *, email: str = "", name: str | None = None)
     stem = _stem(pw)
     if lowered in _COMMON or stem in _COMMON_STEMS:
         return "That's one of the most common passwords. Choose something less predictable."
-    context = [*_SITE_WORDS, _stem(email.split("@", 1)[0]), *(_stem(p) for p in (name or "").split())]
+    # Stem the site words too, so a name with digits like "clip2short" still matches "clipshort".
+    context = [*(_stem(w) for w in _SITE_WORDS), _stem(email.split("@", 1)[0]), *(_stem(p) for p in (name or "").split())]
     leftover = stem
     for word in context:
         if len(word) >= 4:
             leftover = leftover.replace(word, "")
     if stem and len(leftover) < 4:
-        return "Don't build your password from your name, your email or Shortlark."
+        return "Don't build your password from your name, your email or Clip2Short."
     if _breached(pw):
         return "That password has appeared in a data breach, so attackers try it first. Choose a different one."
     return None

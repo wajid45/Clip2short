@@ -50,7 +50,7 @@ export const MENUS: { label: string; items: Item[] }[] = [
     items: [
       { href: "/guides", label: "Guides", desc: "Find moments, write hooks, clip right", icon: IconLibrary },
       { href: "/faq", label: "FAQ", desc: "Credits, sources and captions", icon: IconHelp },
-      { href: "/compare", label: "Compare", desc: "Shortlark or clipping by hand", icon: IconChart },
+      { href: "/compare", label: "Compare", desc: "Clip2Short or clipping by hand", icon: IconChart },
       { href: "/security", label: "Security", desc: "How we protect your data", icon: IconShield },
       { href: "/about", label: "About", desc: "Who we are and why we built it", icon: IconInfo },
       { href: "/contact", label: "Contact", desc: "Sales, support and partnerships", icon: IconMail },
@@ -89,7 +89,7 @@ function DesktopMenu({ menu, open, onToggle, onClose }: { menu: (typeof MENUS)[n
           open ? "visible opacity-100" : "invisible translate-y-1 opacity-0",
         )}
       >
-        <div className="w-[360px] overflow-hidden rounded-2xl border border-line bg-surface p-2 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.45)]">
+        <div className="w-[360px] overflow-hidden rounded-2xl border border-line bg-surface p-2 shadow-[0_4px_12px_-6px_rgba(0,0,0,0.12)]">
           {menu.items.map((it) => (
             <a key={it.label} href={it.href} onClick={onClose} className="group flex items-start gap-3 rounded-xl p-3 transition-colors hover:bg-surface-2">
               <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full border border-line bg-bg text-signal transition-colors group-hover:border-signal">
@@ -181,7 +181,7 @@ export function SiteHeader() {
           !menu && scrolled && (up ? "is-bar" : "is-compact"),
         )}>
         <div className="mx-auto flex h-[72px] max-w-[1400px] items-center justify-between gap-4 px-4 sm:px-8">
-          <a href="/" aria-label="Shortlark home" className="hdr-pill relative z-10 shrink-0">
+          <a href="/" aria-label="Clip2Short home" className="hdr-pill relative z-10 shrink-0">
             <Logo size={29} />
           </a>
 
@@ -207,7 +207,7 @@ export function SiteHeader() {
 
           <div className="hdr-pill relative z-10 flex items-center gap-2 sm:gap-3">
             {/* At the top of a desktop page: theme and sign in sit in the bar. Once you scroll (and on
-                tablets and phones) the bar keeps only the logo, Start free and the menu; both live in the menu. */}
+                tablets and phones) the bar keeps only the logo, Get clipping and the menu; both live in the menu. */}
             {full && (
               <span className="hidden lg:flex">
                 <ThemeToggle />
@@ -217,7 +217,7 @@ export function SiteHeader() {
               href={appHref("/signup")}
               className="inline-flex h-10 items-center rounded-full bg-signal px-4 text-[15px] text-on-signal transition-colors hover:bg-signal-strong sm:h-11 sm:px-5"
             >
-              Start free
+              Get clipping
             </a>
             <MenuButton open={menu} onClick={() => setMenu((m) => !m)} className={clsx(full && "lg:hidden")} />
           </div>
@@ -226,8 +226,9 @@ export function SiteHeader() {
 
       {/* Full-screen menu. Outside the header: the header's backdrop blur would otherwise trap this fixed panel. */}
       <div className={clsx("site-menu fixed inset-0 z-30", menu && "is-open")} aria-hidden={!menu} inert={!menu}>
-        <div className="site-menu-sheet absolute inset-0 overflow-y-auto bg-bg">
-          <div className="mx-auto grid min-h-full max-w-[1400px] content-start gap-10 px-4 pt-24 pb-8 sm:px-8 lg:grid-cols-[1.35fr_1fr] lg:gap-16 lg:pt-32">
+        {/* data-lenis-prevent: page scrolling is frozen while the menu is open, but the menu itself must still scroll on short screens */}
+        <div className="site-menu-sheet absolute inset-0 overflow-y-auto overscroll-contain bg-bg" data-lenis-prevent>
+          <div className="mx-auto flex min-h-full max-w-[1400px] flex-col gap-10 px-4 pt-24 pb-6 sm:px-8 sm:pt-28 lg:grid lg:grid-cols-[1.35fr_1fr] lg:content-start lg:gap-16 lg:pt-32 lg:pb-8">
             {/* Main links: one row each, with an arrow that lights up */}
             <nav aria-label="Menu">
               <ul className="border-t border-line">
@@ -252,10 +253,10 @@ export function SiteHeader() {
               </ul>
             </nav>
 
-            <div className="flex flex-col gap-6">
-              {/* Shortcuts to the features and audiences, as tags */}
+            <div className="mt-auto flex flex-col gap-6 lg:mt-0">
+              {/* Shortcuts to the features and audiences, as tags (desktop only: phones and tablets keep the menu short) */}
               {MENUS.slice(0, 2).map((m) => (
-                <div key={m.label}>
+                <div key={m.label} className="hidden lg:block">
                   <p className="hud text-muted">{m.label}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {m.items
@@ -276,7 +277,7 @@ export function SiteHeader() {
               ))}
 
               {/* The call to action, as the dark CTA card */}
-              <div className="relative mt-2 overflow-hidden rounded-[24px] bg-[#0d0e12] p-6 text-white sm:p-7">
+              <div className="relative mt-2 hidden overflow-hidden rounded-[24px] bg-[#0d0e12] p-6 text-white sm:p-7 lg:block">
                 <div className="plan-glow pointer-events-none absolute inset-x-0 -top-20 h-48" aria-hidden="true" />
                 <p className="relative text-[26px] leading-tight tracking-[-0.02em]">
                   Start with <span className="text-sunset font-display italic">{TRIAL.credits} free credits</span>
@@ -284,7 +285,7 @@ export function SiteHeader() {
                 <p className="relative mt-1 text-[15px] text-white/60">No card required. Cancel anytime.</p>
                 <div className="relative mt-5 grid grid-cols-2 gap-3">
                   <a href={appHref("/signup")} className="flex h-11 items-center justify-center rounded-full bg-signal text-[15px] text-on-signal hover:bg-signal-strong">
-                    Start free
+                    Get clipping
                   </a>
                   <a href={appHref("/login")} className="flex h-11 items-center justify-center rounded-full border border-white/25 text-[15px] text-white hover:border-white">
                     Sign in
@@ -292,9 +293,16 @@ export function SiteHeader() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between gap-4 rounded-2xl border border-line px-4 py-3">
-                <span className="text-[15px] text-muted">Appearance</span>
-                <ThemeToggle />
+              {/* Phones and tablets: sign in and the theme, in one quiet row at the bottom */}
+              <div className="flex items-center justify-between gap-4 border-t border-line pt-5 lg:rounded-2xl lg:border lg:px-4 lg:py-3">
+                <a href={appHref("/login")} onClick={close} className="ulink text-[15px] lg:hidden">
+                  Sign in
+                </a>
+                <span className="hidden text-[15px] text-muted lg:inline">Appearance</span>
+                <span className="flex items-center gap-3">
+                  <span className="text-[13px] text-muted lg:hidden">Theme</span>
+                  <ThemeToggle />
+                </span>
               </div>
             </div>
           </div>

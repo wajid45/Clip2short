@@ -3,7 +3,7 @@
   "version": "3.0.0",
   "private": true,
   "type": "module",
-  "description": "Shortlark marketing site: React + Vite, pre-rendered to static HTML for SEO.",
+  "description": "Clip2Short marketing site: React + Vite, pre-rendered to static HTML for SEO.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build && vite build --ssr src/entry-server.tsx --outDir dist-ssr && node prerender.mjs",

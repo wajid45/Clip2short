@@ -1,10 +1,11 @@
 import clsx from "clsx";
 import { useRouter } from "@/lib/nav";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { apiFetch } from "@/lib/client";
+import { apiFetch, apiUrl } from "@/lib/client";
 import { formatDuration } from "@shortlark/shared/time";
 import { Button, Input, Label, Notice, Textarea } from "./ui";
 import { PlatformIcon } from "@shortlark/shared/components/platform-icon";
+import { Select } from "@shortlark/shared/components/select";
 
 interface Channel {
   id: string;
@@ -110,14 +111,15 @@ export function YouTubeUpload({
     let retries = 0;
     while (offset < f.size) {
       if (cancelled.current) {
-        await fetch(`/api/posts/${postId}`, { method: "DELETE" });
+        await fetch(apiUrl(`/api/posts/${postId}`), { method: "DELETE", credentials: "include" });
         throw new Error("Upload cancelled.");
       }
       const chunk = f.slice(offset, Math.min(offset + chunkSize, f.size));
-      const res = await fetch(`/api/youtube/uploads/${postId}?offset=${offset}`, {
+      const res = await fetch(apiUrl(`/api/youtube/uploads/${postId}?offset=${offset}`), {
         method: "PUT",
         headers: { "Content-Type": "application/octet-stream" },
         body: chunk,
+        credentials: "include",
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -165,7 +167,7 @@ export function YouTubeUpload({
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-line p-4">
+    <div className="space-y-4 rounded-xl border border-line bg-surface p-4">
       <div className="flex items-center gap-2.5">
         <PlatformIcon platform="youtube" size={24} />
         <h4 className="text-sm font-medium">Upload to YouTube</h4>
@@ -184,7 +186,7 @@ export function YouTubeUpload({
             onClick={() => setSelected((s) => (s.includes(c.id) ? s.filter((x) => x !== c.id) : [...s, c.id]))}
             className={clsx(
               "flex h-9 items-center gap-2 rounded-lg border px-3 text-sm transition-colors disabled:opacity-50",
-              selected.includes(c.id) ? "border-signal bg-signal-soft text-text" : "border-line text-muted hover:text-text",
+              selected.includes(c.id) ? "border-signal bg-signal-soft text-text" : "border-line bg-surface text-text hover:border-line-strong",
             )}
           >
             {c.displayName}
@@ -247,28 +249,30 @@ export function YouTubeUpload({
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <Label>Visibility</Label>
-              <select
+              <Select
+                ariaLabel="Visibility"
                 value={mode === "schedule" ? "public" : privacy}
                 disabled={mode === "schedule"}
-                onChange={(e) => setPrivacy(e.target.value as typeof privacy)}
-                className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-text focus:border-signal focus:outline-none disabled:opacity-60"
-              >
-                <option value="public">Public</option>
-                <option value="unlisted">Unlisted</option>
-                <option value="private">Private</option>
-              </select>
+                onChange={(v) => setPrivacy(v as typeof privacy)}
+                options={[
+                  { value: "public", label: "Public" },
+                  { value: "unlisted", label: "Unlisted" },
+                  { value: "private", label: "Private" },
+                ]}
+              />
             </div>
             <div>
               <Label hint="required by YouTube">Made for kids?</Label>
-              <select
+              <Select
+                ariaLabel="Made for kids?"
                 value={kids}
-                onChange={(e) => setKids(e.target.value as typeof kids)}
-                className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-text focus:border-signal focus:outline-none"
-              >
-                <option value="">Choose…</option>
-                <option value="no">No, it&apos;s not made for kids</option>
-                <option value="yes">Yes, it&apos;s made for kids</option>
-              </select>
+                onChange={(v) => setKids(v as typeof kids)}
+                options={[
+                  { value: "", label: "Choose…" },
+                  { value: "no", label: "No, it's not made for kids" },
+                  { value: "yes", label: "Yes, it's made for kids" },
+                ]}
+              />
             </div>
           </div>
 

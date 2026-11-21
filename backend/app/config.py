@@ -26,6 +26,19 @@ def _url(name: str, default: str) -> str:
     return (_opt(name) or default).rstrip("/")
 
 
+def _parse_prices(raw: str | None) -> dict[str, tuple[float, float]]:
+    out: dict[str, tuple[float, float]] = {}
+    for part in (raw or "").replace(",", ";").split(";"):
+        model, _, prices = part.partition("=")
+        inp, _, outp = prices.partition("/")
+        try:
+            if model.strip() and inp.strip() and outp.strip():
+                out[model.strip()] = (float(inp), float(outp))
+        except ValueError:
+            continue
+    return out
+
+
 @dataclass(frozen=True)
 class Settings:
     app_url: str = _url("APP_URL", "http://localhost:3000")
@@ -37,7 +50,10 @@ class Settings:
     trust_proxy: bool = _opt("TRUST_PROXY") == "true"
     web_dist: str | None = _opt("WEB_DIST")
     is_prod: bool = (_opt("ENV") or _opt("NODE_ENV") or "development") == "production"
-    database_url: str = _opt("DATABASE_URL") or f"sqlite:///{(BACKEND_DIR / 'data' / 'dev.db').as_posix()}"
+    # MongoDB (Atlas or self-hosted). A <db_password> / <db_username> placeholder in the URI is filled from
+    # MONGODB_PASSWORD / MONGODB_USERNAME. "mongomock://" runs an in-memory database (tests).
+    mongodb_uri: str = _opt("MONGODB_URI") or "mongodb://localhost:27017"
+    mongodb_db: str = _opt("MONGODB_DB") or "shortlark"
 
     session_secret: str | None = _opt("SESSION_SECRET")
     encryption_key: str | None = _opt("ENCRYPTION_KEY")
@@ -56,8 +72,12 @@ class Settings:
         default_factory=lambda: {c: m for c in ("podcast", "gaming", "movies", "sports", "other") if (m := _opt(f"GEMINI_MODEL_{c.upper()}"))}
     )
 
+    # Gemini prices for the admin's AI spending cards, US dollars per million tokens (input/output):
+    # GEMINI_PRICES="model-a=0.30/2.50; model-b=1.25/10". Models left out are counted but not priced.
+    gemini_prices: dict[str, tuple[float, float]] = field(default_factory=lambda: _parse_prices(_opt("GEMINI_PRICES")))
+
     resend_key: str | None = _opt("RESEND_API_KEY")
-    email_from: str = _opt("EMAIL_FROM") or "Shortlark <no-reply@shortlark.com>"
+    email_from: str = _opt("EMAIL_FROM") or "Clip2Short <no-reply@clip2short.com>"
 
     stripe_secret: str | None = _opt("STRIPE_SECRET_KEY")
     stripe_webhook_secret: str | None = _opt("STRIPE_WEBHOOK_SECRET")
@@ -92,12 +112,25 @@ def dev_billing_bypass() -> bool:
     return not settings.is_prod and not billing_configured()
 
 
+MIN_SECRET_LENGTH = 32
+
+
+def _local_app() -> bool:
+    from urllib.parse import urlsplit
+
+    return (urlsplit(settings.app_url).hostname or "") in ("localhost", "127.0.0.1", "::1") or (urlsplit(settings.app_url).hostname or "").endswith(".localhost")
+
+
 def require_secret(name: str) -> str:
     v = getattr(settings, name)
+    env = name.upper()
     if v:
+        if (settings.is_prod or not _local_app()) and len(v) < MIN_SECRET_LENGTH:
+            raise RuntimeError(f"{env} is too short: use at least {MIN_SECRET_LENGTH} random characters (python -c \"import secrets; print(secrets.token_urlsafe(48))\")")
         return v
-    if settings.is_prod:
-        raise RuntimeError(f"Missing required environment variable for {name}")
+    if settings.is_prod or not _local_app():
+        # The fallback below is public in the source code: on a real address it would let anyone forge sessions.
+        raise RuntimeError(f"Missing required environment variable {env}")
     # Deterministic development fallback so local sessions survive restarts. Never used in production.
     camel = "".join(w if i == 0 else w.capitalize() for i, w in enumerate(name.split("_")))
     return f"dev-only-{camel}-change-me-in-production-0123456789abcdef"

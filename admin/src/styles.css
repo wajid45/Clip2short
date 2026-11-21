@@ -3,16 +3,33 @@
 /* Tailwind only scans this package by default; include the shared brand components. */
 @source "../../shared/src";
 
-/*
- * The admin portal is a data console: body text and tables use a clean sans for density and
- * legibility; page titles keep the brand serif (font-display).
- */
+/* The admin portal is set in Playfair Display, like the app and the landing page. */
 @theme {
-  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "Playfair Display", "Times New Roman", Georgia, serif;
+  /* Titles and numbers in Playfair Display, like the app and the landing page. */
+  --font-display: "Playfair Display", "Times New Roman", Georgia, serif;
+  /* Numbers, timecodes and codes in Playfair too (tabular figures come from .tc / .num). */
+  --font-mono: "Playfair Display", "Times New Roman", Georgia, serif;
+}
+
+/* Counts and amounts: Playfair with even-width figures, so columns line up. */
+.num {
+  font-family: var(--font-display);
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 .login-glow {
   background:
     radial-gradient(50% 40% at 50% 0%, color-mix(in srgb, var(--color-signal) 22%, transparent), transparent 70%),
     radial-gradient(40% 30% at 85% 100%, rgb(132 73 199 / 0.16), transparent 70%);
+}
+
+/* Light mode: a soft ice-blue page behind white cards. Cards keep --color-surface (white). */
+:root[data-theme="light"] {
+  --color-bg: #f4f8fc;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --color-bg: #f4f8fc;
+  }
 }

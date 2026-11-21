@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { apiUrl } from "@/lib/client";
 import { Card, Notice, buttonClass } from "./ui";
 import { IconDownload } from "@shortlark/shared/components/icons";
 
-/** Download the clip as an MP4 instead of posting through Shortlark. */
+/** Download the clip as an MP4 instead of posting through Clip2Short. */
 export function DownloadClip({ clipId, available, platform, dirty }: { clipId: string; available: boolean; platform: string; dirty: boolean }) {
   const [started, setStarted] = useState<string | null>(null);
   return (
@@ -25,7 +26,7 @@ export function DownloadClip({ clipId, available, platform, dirty }: { clipId: s
             ].map(({ f, l }) => (
               <a
                 key={f}
-                href={dirty ? undefined : `/api/clips/${clipId}/download?format=${f}`}
+                href={dirty ? undefined : apiUrl(`/api/clips/${clipId}/download?format=${f}`)}
                 aria-disabled={dirty}
                 onClick={(e) => {
                   if (dirty) e.preventDefault();
@@ -41,7 +42,7 @@ export function DownloadClip({ clipId, available, platform, dirty }: { clipId: s
         </>
       ) : (
         <p className="mt-1 text-xs leading-relaxed text-muted">
-          {platform === "youtube" ? "YouTube" : "Vimeo"} doesn&apos;t allow downloading its videos, so Shortlark can&apos;t cut a file from this source.
+          {platform === "youtube" ? "YouTube" : "Vimeo"} doesn&apos;t allow downloading its videos, so Clip2Short can&apos;t cut a file from this source.
           Import a direct link to your original .mp4 or .webm to download clips, or use the exported timecodes in your own editor.
         </p>
       )}

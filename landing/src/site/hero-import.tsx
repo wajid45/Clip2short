@@ -24,7 +24,7 @@ export function HeroImport() {
           <input
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="Paste a YouTube, Vimeo or .mp4 link"
+            placeholder="Paste the YouTube video link"
             inputMode="url"
             autoComplete="off"
             spellCheck={false}

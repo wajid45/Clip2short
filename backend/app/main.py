@@ -1,4 +1,4 @@
-"""Shortlark API (FastAPI).
+"""Clip2Short API (FastAPI).
 
 The web app and the API share one origin: in development Vite proxies /api here; in production
 this app also serves the built web app (web/dist), so the session cookie stays first-party.
@@ -26,20 +26,20 @@ from .routes import account, billing, clips, pages, portal, posts, profile, two_
 from .scheduler import start_scheduler, stop_scheduler
 
 logging.basicConfig(level=logging.INFO, format="[%(name)s] %(levelname)s %(message)s")
-log = logging.getLogger("shortlark")
+log = logging.getLogger("clip2short")
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     start_scheduler()
-    log.info("Shortlark API ready on port %s", settings.port)
+    log.info("Clip2Short API ready on port %s", settings.port)
     yield
     stop_scheduler()
     background.shutdown()
 
 
 app = FastAPI(
-    title="Shortlark API",
+    title="Clip2Short API",
     version="3.0.0",
     lifespan=lifespan,
     default_response_class=AppJSONResponse,
@@ -58,6 +58,27 @@ class LeadsOnlyCORS(CORSMiddleware):
         return await self.app(scope, receive, send)
 
 
+# When the app and admin are served from their own origins (static hosting on app./admin. subdomains,
+# with the API on its own subdomain), the browser needs CORS headers to make credentialed calls. The
+# allowed origins are only the app and admin sites, and the two public endpoints are left to
+# LeadsOnlyCORS above. With a same-origin deploy (a host that proxies /api) no request is cross-origin,
+# so this stays dormant.
+class AppCORS(CORSMiddleware):
+    async def __call__(self, scope, receive, send):
+        p = scope.get("path", "")
+        if scope["type"] == "http" and p.startswith("/api/") and p not in ("/api/leads", "/api/contact", "/api/stripe/webhook"):
+            return await super().__call__(scope, receive, send)
+        return await self.app(scope, receive, send)
+
+
+app.add_middleware(
+    AppCORS,
+    allow_origins=[settings.app_url, settings.admin_url],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["content-type", "x-background"],
+    max_age=86400,
+)
 app.add_middleware(LeadsOnlyCORS, allow_origins=[settings.landing_url], allow_methods=["POST"], allow_headers=["content-type"], max_age=86400)
 
 _UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}

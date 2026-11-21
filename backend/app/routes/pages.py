@@ -8,11 +8,9 @@ import json
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, Request
-from sqlalchemy import func, select
-from sqlalchemy.orm import Session
 
 from ..ai.client import ai_configured
-from ..auth import is_admin, require_admin, require_subscriber, require_user
+from ..auth import admin_verified, assert_feature, is_admin, network_allowed, plan_for_network, require_admin, require_subscriber, require_user
 from ..clips import clip_order, clip_where, filters_from_params
 from ..config import billing_configured, dev_billing_bypass, settings
 from ..credits import by_source, credit_summary, ensure_trial
@@ -20,7 +18,8 @@ from ..db import get_db, utcnow
 from ..email import email_configured
 from ..http import json_response
 from ..integrations import INTEGRATIONS, cred, integration_for, is_configured, load_integrations
-from ..models import Clip, ContactMessage, CreditTransaction, IntegrationSetting, Lead, Post, SocialAccount, User, Video
+from ..models import Clip, ContactMessage, CreditTransaction, IntegrationSetting, Post, SocialAccount, User, Video
+from ..odm import Session, func, select
 from ..plans import analysis_cost, get_plan, has_active_subscription, limits_for
 from ..social.providers import PROVIDERS
 from ..video.pipeline import get_segments
@@ -49,7 +48,9 @@ def me(user: User = Depends(require_user), s: Session = Depends(get_db)):
             "planName": plan["name"] if plan else None,
             "credits": credit_summary(s, user.id).total,
             "monthlyCredits": plan["monthlyCredits"] if plan else None,
-            "isAdmin": is_admin(user),
+            "isAdmin": is_admin(user) and admin_verified(s, user),
+            # Admins get a button to the admin dashboard; it asks for the password and 2FA code itself.
+            "adminDashboardUrl": settings.admin_url if is_admin(user) else None,
         }
     )
 
@@ -82,7 +83,7 @@ def videos(user: User = Depends(require_subscriber), s: Session = Depends(get_db
                 "clips": [{"score": top}] if has_clip else [],
             }
         )
-    return page({"videos": out, "aiConfigured": ai_configured()})
+    return page({"videos": out, "aiConfigured": ai_configured(), "engines": limits_for(user)["engines"]})
 
 
 @router.get("/videos/{video_id}")
@@ -267,8 +268,62 @@ def queue(request: Request, user: User = Depends(require_subscriber), s: Session
     )
 
 
+@router.get("/overview")
+def overview(user: User = Depends(require_user), s: Session = Depends(get_db)):
+    """The customer's dashboard: credits, what they processed and posted, with 30-day trends."""
+    from collections import Counter
+
+    now = utcnow()
+    d30 = now - timedelta(days=30)
+    days = [(d30 + timedelta(days=i + 1)).date().isoformat() for i in range(30)]
+
+    def series(dates) -> list[dict]:
+        c = Counter(d.date().isoformat() for d in dates if d is not None)
+        return [{"key": k, "n": c.get(k, 0)} for k in days]
+
+    spends = s.execute(select(CreditTransaction.createdAt, CreditTransaction.delta).where(CreditTransaction.userId == user.id, CreditTransaction.kind == "spend", CreditTransaction.createdAt >= d30)).all()
+    spent_by_day: Counter = Counter()
+    for created, delta in spends:
+        spent_by_day[created.date().isoformat()] += -delta
+    videos = s.scalars(select(Video.createdAt).where(Video.userId == user.id, Video.createdAt >= d30)).all()
+    clips = s.scalars(select(Clip.createdAt).where(Clip.userId == user.id, Clip.createdAt >= d30)).all()
+    posts = s.scalars(select(Post.publishedAt).where(Post.userId == user.id, Post.publishedAt >= d30)).all()
+    summary = credit_summary(s, user.id)
+    plan = get_plan(user.plan) if has_active_subscription(user) else None
+    top_clips = s.scalars(select(Clip).where(Clip.userId == user.id, Clip.score.is_not(None)).order_by(Clip.score.desc(), Clip.createdAt.desc()).limit(5)).all()
+    titles = {v.id: v.title for v in s.scalars(select(Video).where(Video.id.in_({c.videoId for c in top_clips}))).all()}
+    top = [
+        {"id": c.id, "title": c.title, "score": c.score, "momentLabel": c.momentLabel, "status": c.status, "video": titles.get(c.videoId, "")}
+        for c in top_clips
+    ]
+    count = lambda q: s.scalar(q) or 0  # noqa: E731
+    return page(
+        {
+            "credits": summary.total,
+            "bySource": by_source(summary),
+            "planName": plan["name"] if plan else None,
+            "monthlyCredits": plan["monthlyCredits"] if plan else None,
+            "renewsAt": user.currentPeriodEnd if plan else None,
+            "creditsSpent30d": sum(-d for _, d in spends),
+            "videos30d": len(videos),
+            "videosTotal": count(select(func.count()).select_from(Video).where(Video.userId == user.id)),
+            "clips30d": len(clips),
+            "clipsTotal": count(select(func.count()).select_from(Clip).where(Clip.userId == user.id)),
+            "published30d": len(posts),
+            "queued": count(select(func.count()).select_from(Post).where(Post.userId == user.id, Post.status.in_(["queued", "scheduled"]))),
+            "nextScheduledAt": s.scalar(select(func.min(Post.scheduledAt)).where(Post.userId == user.id, Post.status.in_(["queued", "scheduled"]), Post.scheduledAt >= now)),
+            "creditsByDay": [{"key": k, "n": spent_by_day.get(k, 0)} for k in days],
+            "videosByDay": series(videos),
+            "clipsByDay": series(clips),
+            "postsByDay": series(posts),
+            "topClips": top,
+        }
+    )
+
+
 @router.get("/analytics")
 def analytics(request: Request, user: User = Depends(require_subscriber), s: Session = Depends(get_db)):
+    assert_feature(user, "postAnalytics")  # 402: the app opens Billing
     r = request.query_params.get("range") or ""
     rng = r if r in ("7", "30", "90") else "30"
     since = utcnow() - timedelta(days=int(rng))
@@ -333,7 +388,7 @@ ORDER = ["youtube", "instagram", "facebook", "sandbox"]
 def accounts(user: User = Depends(require_subscriber), s: Session = Depends(get_db)):
     load_integrations()
     rows = s.scalars(select(SocialAccount).where(SocialAccount.userId == user.id).order_by(SocialAccount.createdAt.asc())).all()
-    admin = is_admin(user)
+    admin = is_admin(user) and admin_verified(s, user)
     platforms = []
     for p in ORDER:
         if p == "sandbox" and not PROVIDERS["sandbox"].configured():
@@ -345,6 +400,8 @@ def accounts(user: User = Depends(require_subscriber), s: Session = Depends(get_
                 "configured": PROVIDERS[p].configured(),
                 "integrationId": integration["id"] if integration else None,
                 "integrationName": integration["name"] if integration else None,
+                "allowed": network_allowed(user, p),
+                "planNeeded": None if network_allowed(user, p) else plan_for_network(p),
             }
         )
     return page(
@@ -403,21 +460,10 @@ def billing(request: Request, user: User = Depends(require_user), s: Session = D
     )
 
 
-@router.get("/admin/leads")
-def leads(_: User = Depends(require_admin), s: Session = Depends(get_db)):
-    rows = s.scalars(select(Lead).order_by(Lead.createdAt.desc()).limit(1000)).all()
-    keys = ("id", "email", "source", "utmSource", "utmMedium", "utmCampaign", "referrer", "createdAt")
-    return page(
-        {
-            "leads": [{k: getattr(lead, k) for k in keys} for lead in rows],
-            "total": s.scalar(select(func.count()).select_from(Lead)) or 0,
-            "converted": s.scalar(select(func.count()).select_from(Lead).where(Lead.source == "converted")) or 0,
-        }
-    )
 
 
-@router.get("/admin/integrations")
-def integrations(_: User = Depends(require_admin), s: Session = Depends(get_db)):
+def integrations_list(s: Session) -> list[dict]:
+    """Each network's developer app: setup steps, redirect URIs and whether it's live. Secrets never leave the server."""
     load_integrations(force=True)
     saved = {r.id: r for r in s.scalars(select(IntegrationSetting)).all()}
     out = []
@@ -439,9 +485,10 @@ def integrations(_: User = Depends(require_admin), s: Session = Depends(get_db))
                 "savedClientId": row.clientId if row else (c.id or "" if c.source == "env" else ""),
                 "hasSavedSecret": bool(row and row.clientSecretEnc),
                 "source": c.source,
+                "connectedAccounts": s.scalar(select(func.count()).select_from(SocialAccount).where(SocialAccount.platform.in_(i["platforms"]))) or 0,
             }
         )
-    return page({"integrations": out})
+    return out
 
 
 @router.get("/settings")
@@ -462,7 +509,6 @@ def account_settings(user: User = Depends(require_user), s: Session = Depends(ge
     )
 
 
-@router.get("/admin/messages")
 def messages(_: User = Depends(require_admin), s: Session = Depends(get_db)):
     rows = s.scalars(select(ContactMessage).order_by(ContactMessage.handled.asc(), ContactMessage.createdAt.desc()).limit(500)).all()
     return page(

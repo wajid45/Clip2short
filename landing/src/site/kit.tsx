@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import type { ReactNode } from "react";
+import type { ReactNode, SyntheticEvent } from "react";
 import { ShortsWall } from "@/components/landing/shorts-wall";
 import { SplitRise } from "../motion/split";
 import { appHref } from "../config";
@@ -88,12 +88,18 @@ export interface QA {
   a: ReactNode;
 }
 
-/** Questions as an accordion: number, question, plus sign that turns into a minus. */
+/** Questions as an accordion: number, question, plus sign that turns into a minus. Opening one closes the others. */
 export function FaqList({ items, start = 0 }: { items: QA[]; start?: number }) {
+  // One answer open at a time: when a question opens, close its siblings in this list.
+  const onToggle = (e: SyntheticEvent<HTMLDetailsElement>) => {
+    const opened = e.currentTarget;
+    if (!opened.open) return;
+    opened.parentElement?.querySelectorAll<HTMLDetailsElement>(":scope > details[open]").forEach((d) => d !== opened && (d.open = false));
+  };
   return (
     <div className="border-t border-line">
       {items.map((f, i) => (
-        <details key={f.q} className="faq-item group border-b border-line">
+        <details key={f.q} onToggle={onToggle} className="faq-item group border-b border-line">
           <summary className="flex cursor-pointer list-none items-baseline gap-5 py-6 [&::-webkit-details-marker]:hidden">
             <span className="hud w-7 shrink-0 text-faint">{String(start + i + 1).padStart(2, "0")}</span>
             <span className="flex-1 text-[clamp(19px,1.8vw,24px)] leading-snug tracking-[-0.01em] transition-colors group-hover:text-signal">{f.q}</span>
@@ -115,22 +121,32 @@ export function ArrowLink({ href, children }: { href: string; children: ReactNod
 }
 
 /** The closing call to action over the wall of Shorts, shared by every page. */
-export function FinalCta() {
+export function FinalCta({
+  title = "Your stream has Shorts",
+  accent = "Let's find them",
+  button = "Let's cook",
+  href,
+}: {
+  title?: string;
+  accent?: string;
+  button?: string;
+  href?: string;
+}) {
   return (
     <section className="relative overflow-hidden bg-inverse text-inverse-text">
       <ShortsWall />
       <div className="relative mx-auto max-w-[1240px] px-4 py-28 sm:px-8 sm:py-36">
-        <div className="mx-auto max-w-4xl rounded-[36px] border border-inverse-text/10 bg-inverse/85 px-6 py-14 text-center shadow-[0_40px_120px_-40px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:px-14">
+        <div className="mx-auto max-w-4xl rounded-[36px] border border-black/5 bg-white px-6 py-14 text-center text-[#121212] shadow-[0_40px_120px_-40px_rgba(0,0,0,0.45)] sm:px-14">
           <h2 className="mx-auto max-w-3xl text-[40px] leading-[1.0] font-semibold tracking-[-0.05em] sm:text-[58px]">
-            Your next stream has a dozen Shorts in it
+            {title}
             <br />
-            <span className="text-sunset font-display font-normal tracking-normal italic">Let&apos;s find them</span>
+            <span className="text-sunset font-display font-normal tracking-normal italic">{accent}</span>
           </h2>
           <a
-            href={appHref("/signup")}
+            href={href ?? appHref("/signup")}
             className="group mt-10 inline-flex h-14 items-center gap-3 rounded-full bg-signal pr-2.5 pl-8 text-[18px] font-medium text-on-signal shadow-[0_18px_50px_-14px_rgba(217,72,15,0.75)] transition-[background-color,transform] hover:bg-signal-strong active:scale-[0.98]"
           >
-            Start free
+            {button}
             <span className="flex size-9 items-center justify-center rounded-full bg-white/20 transition-transform duration-300 group-hover:translate-x-1" aria-hidden="true">
               <svg viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M3 8h10M9 4l4 4-4 4" />

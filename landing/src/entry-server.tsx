@@ -18,13 +18,13 @@ export function render(path: string): string {
 
 /** JSON-LD for search engines: the product on the home and pricing pages, Q&A on the FAQ page, articles for guides. */
 export function structuredData(path: string, site: string): object[] {
-  const org = { "@type": "Organization", name: "Shortlark", url: `${site}/`, logo: `${site}/brand/logo-mark.png` };
+  const org = { "@type": "Organization", name: "Clip2Short", url: `${site}/`, logo: `${site}/brand/logo-mark.png` };
   if (path === "/" || path === "/pricing") {
     return [
       {
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
-        name: "Shortlark",
+        name: "Clip2Short",
         applicationCategory: "MultimediaApplication",
         operatingSystem: "Web",
         description: "AI that finds the moments worth clipping in long videos, scores them, writes hooks and captions, and posts them to YouTube Shorts, Instagram Reels and Facebook.",

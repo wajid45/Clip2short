@@ -12,6 +12,7 @@ from google.genai import errors, types
 from pydantic import BaseModel
 
 from ..config import settings
+from .usage import record as record_usage
 
 _client: genai.Client | None = None
 _lock = threading.Lock()
@@ -69,12 +70,14 @@ def generate[T: BaseModel](
     refusal_message: str = "The AI declined to process this content.",
     max_output_tokens: int = 65536,
     model: str | None = None,
+    purpose: str = "analysis",
 ) -> T:
     """One request that must come back as JSON matching `schema` (Gemini structured output).
 
     `model` overrides GEMINI_MODEL (the category engines pass their own)."""
+    used = model or settings.gemini_model
     resp = client().models.generate_content(
-        model=model or settings.gemini_model,
+        model=used,
         contents=prompt,
         config=types.GenerateContentConfig(
             system_instruction=system,
@@ -84,6 +87,7 @@ def generate[T: BaseModel](
             max_output_tokens=max_output_tokens,
         ),
     )
+    record_usage(resp, model=used, purpose=purpose)
     text = _check(resp, refusal_message)
     if isinstance(resp.parsed, schema):
         return resp.parsed
@@ -107,6 +111,7 @@ def generate_with_urls[T: BaseModel](schema: type[T], *, prompt: str, thinking: 
             max_output_tokens=65536,
         ),
     )
+    record_usage(resp, model=settings.gemini_model, purpose="fetch")
     try:
         text = _check(resp, "The AI declined to fetch these pages.")
     except AiRefusal:

@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import { apiUrl } from "@/lib/client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   IconCalendar,
@@ -9,11 +10,10 @@ import {
   IconLibrary,
   IconLink,
   IconLogout,
-  IconMail,
   IconMenu,
   IconSettings,
+  IconShield,
   IconSpark,
-  IconUsers,
   IconVideo,
   IconX,
 } from "@shortlark/shared/components/icons";
@@ -22,7 +22,17 @@ import { ThemeToggle } from "@shortlark/shared/components/theme-toggle";
 import { Link, usePathname, useRouter } from "@/lib/nav";
 import { CreditsPopover } from "./credits-popover";
 
+/** Overview: a dashboard gauge. */
+const IconGauge = ({ size = 17, className }: { size?: number; className?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={className}>
+    <path d="M3.5 14.5a7 7 0 1 1 13 0" />
+    <path d="M10 10.5l3-3" />
+    <circle cx="10" cy="11" r="1.1" />
+  </svg>
+);
+
 const NAV = [
+  { href: "/app/overview", label: "Overview", icon: IconGauge },
   { href: "/app", label: "Videos", icon: IconVideo, exact: true },
   { href: "/app/moments", label: "Best moments", icon: IconSpark },
   { href: "/app/library", label: "Clip library", icon: IconLibrary },
@@ -32,12 +42,6 @@ const NAV = [
 ];
 // Billing is reached from the credits card and the account menu.
 
-const ADMIN_NAV = [
-  { href: "/admin/leads", label: "Leads", icon: IconUsers },
-  { href: "/admin/messages", label: "Messages", icon: IconMail },
-  { href: "/admin/integrations", label: "Integrations", icon: IconLink },
-];
-
 export interface NavUser {
   name: string;
   email: string;
@@ -45,6 +49,7 @@ export interface NavUser {
   credits: number;
   monthlyCredits: number | null;
   isAdmin: boolean;
+  adminDashboardUrl?: string | null;
 }
 
 const EXPANDED = 240;
@@ -97,11 +102,11 @@ function UserMenu({ user, rail, onNavigate }: { user: NavUser; rail: boolean; on
   const ref = useDismiss(open, () => setOpen(false));
 
   async function logout() {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await fetch(apiUrl("/api/auth/logout"), { method: "POST", credentials: "include" });
     router.replace("/login");
   }
 
-  const item = "flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm text-muted transition-colors hover:bg-surface-2 hover:text-text";
+  const item = "flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm text-text transition-colors hover:bg-surface-2";
   return (
     <div ref={ref} className="relative">
       <button
@@ -120,7 +125,10 @@ function UserMenu({ user, rail, onNavigate }: { user: NavUser; rail: boolean; on
         {!rail && (
           <>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm text-text">{user.name}</span>
+              <span className="flex min-w-0 items-baseline gap-3 text-sm text-text">
+                <span className="truncate">{user.name}</span>
+                <span className="shrink-0 text-xs font-semibold text-muted italic">{user.planName ?? "Free"}</span>
+              </span>
               <span className="block truncate text-xs text-faint">{user.email}</span>
             </span>
             <IconChevronDown size={16} className={clsx("shrink-0 text-faint transition-transform", !open && "rotate-180")} />
@@ -131,12 +139,15 @@ function UserMenu({ user, rail, onNavigate }: { user: NavUser; rail: boolean; on
         <div
           role="menu"
           className={clsx(
-            "absolute z-50 w-60 rounded-xl border border-line bg-surface p-1.5 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.45)]",
+            "absolute z-50 w-60 rounded-xl border border-line bg-surface p-1.5 shadow-[0_4px_12px_-6px_rgba(0,0,0,0.12)]",
             rail ? "bottom-0 left-full ml-3" : "bottom-full left-0 mb-2",
           )}
         >
           <div className="px-2.5 py-2">
-            <p className="truncate text-sm font-medium text-text">{user.name}</p>
+            <p className="flex min-w-0 items-baseline gap-3 text-sm font-medium text-text">
+              <span className="truncate">{user.name}</span>
+              <span className="shrink-0 text-xs font-semibold text-muted italic">{user.planName ?? "Free"}</span>
+            </p>
             <p className="truncate text-xs text-faint">{user.email}</p>
           </div>
           <div className="my-1 h-px bg-line" />
@@ -158,7 +169,7 @@ function UserMenu({ user, rail, onNavigate }: { user: NavUser; rail: boolean; on
               <Icon size={16} /> {label}
             </Link>
           ))}
-          <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-sm text-muted">
+          <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-sm text-text">
             Theme <ThemeToggle />
           </div>
           <div className="my-1 h-px bg-line" />
@@ -207,7 +218,7 @@ export function AppShell({ user, children }: { user: NavUser; children: ReactNod
     clsx(
       "flex items-center rounded-lg text-sm transition-colors",
       rail ? "h-9 justify-center" : "h-10 gap-2.5 px-2.5 lg:h-9",
-      on ? "bg-surface-2 text-text" : "text-muted hover:bg-surface-2/60 hover:text-text",
+      on ? "bg-surface-2 text-text" : "text-text hover:bg-surface-2/60",
     );
 
   const navLinks = (rail: boolean) => (
@@ -221,15 +232,21 @@ export function AppShell({ user, children }: { user: NavUser; children: ReactNod
           </Link>
         );
       })}
-      {user.isAdmin && (
+      {user.adminDashboardUrl && (
         <>
-          {rail ? <div className="mx-3 my-3 h-px bg-line" /> : <p className="mt-5 mb-1 px-2.5 text-[11px] font-medium text-faint">Admin</p>}
-          {ADMIN_NAV.map(({ href, label, icon: Icon }) => (
-            <Link key={href} href={href} title={rail ? label : undefined} aria-label={rail ? label : undefined} className={link(rail, pathname.startsWith(href))}>
-              <Icon size={17} />
-              {!rail && label}
-            </Link>
-          ))}
+          <div className={clsx("h-px bg-line", rail ? "mx-3 my-3" : "my-3")} />
+          {/* Opens the admin dashboard (its own site); it asks for the password and 2FA code itself. */}
+          <a
+            href={user.adminDashboardUrl}
+            target="_blank"
+            rel="noopener"
+            title={rail ? "Admin dashboard" : undefined}
+            aria-label={rail ? "Admin dashboard" : undefined}
+            className={clsx(link(rail, false), "text-signal hover:text-signal-strong")}
+          >
+            <IconShield size={17} />
+            {!rail && "Admin dashboard"}
+          </a>
         </>
       )}
     </nav>
@@ -249,7 +266,7 @@ export function AppShell({ user, children }: { user: NavUser; children: ReactNod
       {/* Desktop sidebar */}
       <aside
         className={clsx(
-          "group/rail fixed inset-y-0 left-0 z-30 hidden flex-col justify-between border-r border-line bg-bg py-5 transition-[width] duration-200 ease-out lg:flex",
+          "group/rail fixed inset-y-0 left-0 z-30 hidden flex-col justify-between border-r border-line bg-surface py-5 transition-[width] duration-200 ease-out lg:flex",
           collapsed ? "px-2.5" : "px-3",
         )}
         style={{ width }}
@@ -275,7 +292,7 @@ export function AppShell({ user, children }: { user: NavUser; children: ReactNod
             </div>
           ) : (
             <div className="mb-7 flex items-center justify-between pl-2.5">
-              <Link href="/app" aria-label="Shortlark home">
+              <Link href="/app" aria-label="Clip2Short home">
                 <Logo />
               </Link>
               <button
@@ -295,12 +312,12 @@ export function AppShell({ user, children }: { user: NavUser; children: ReactNod
       </aside>
 
       {/* Tablet and phone: top bar + drawer */}
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-line bg-bg/90 px-4 backdrop-blur-md sm:px-6 lg:hidden">
-        <Link href="/app" aria-label="Shortlark home">
+      <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-line bg-surface/90 px-4 backdrop-blur-md sm:px-6 lg:hidden">
+        <Link href="/app" aria-label="Clip2Short home">
           <Logo />
         </Link>
         <div className="flex items-center gap-2">
-          <Link href="/app/billing" className="tc rounded-full border border-line px-2.5 py-1 text-xs text-muted hover:text-text">
+          <Link href="/app/billing" className="tc rounded-full border border-line bg-surface px-2.5 py-1 text-xs text-muted hover:text-text">
             {user.credits.toLocaleString("en-US")} credits
           </Link>
           <button
@@ -321,7 +338,7 @@ export function AppShell({ user, children }: { user: NavUser; children: ReactNod
           aria-modal="true"
           aria-label="Menu"
           className={clsx(
-            "absolute inset-y-0 left-0 flex w-[min(20rem,86vw)] flex-col justify-between border-r border-line bg-bg px-3 pt-4 pb-5 shadow-2xl transition-transform duration-200 ease-out",
+            "absolute inset-y-0 left-0 flex w-[min(20rem,86vw)] flex-col justify-between border-r border-line bg-surface px-3 pt-4 pb-5 shadow-2xl transition-transform duration-200 ease-out",
             drawer ? "translate-x-0" : "-translate-x-full",
           )}
         >

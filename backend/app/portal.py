@@ -20,19 +20,19 @@ from urllib.parse import quote
 
 import jwt
 from fastapi import Depends, Request, Response
-from sqlalchemy.orm import Session
 
 from .auth import is_admin
 from .config import require_secret, settings
 from .db import get_db
 from .http import HttpError
 from .models import AdminAudit, AdminTotp, User
+from .odm import Session
 
 PORTAL_COOKIE = "sl_admin"
-PORTAL_MAX_AGE = 60 * 60 * 12  # 12 hours after signing in, sign in again (OWASP ASVS 3.3.2, level 2)
-PORTAL_IDLE = 60 * 30  # ...or after 30 minutes without using the console
+PORTAL_IDLE = 30 * 60  # 30 minutes without using the dashboard (or switching back to it) locks it: password and 2FA again
+PORTAL_MAX_AGE = 12 * 60 * 60  # a safety cap only (OWASP ASVS 3.3.2, level 2): an all-day session still ends
 STEP_SECONDS = 30
-ISSUER = "Shortlark Admin"
+ISSUER = "Clip2Short Admin"
 
 
 # ── TOTP (RFC 6238, SHA-1, 6 digits, 30 s): what every authenticator app speaks ──

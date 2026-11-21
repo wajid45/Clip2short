@@ -21,7 +21,7 @@ const STEPS = [
     visual: "score",
   },
   {
-    title: "Trim to the frame",
+    title: "Tighten the cut",
     body: "Nudge in and out points on a frame-accurate timeline, rewrite the hook, and export vertical 9:16.",
     visual: "trim",
   },

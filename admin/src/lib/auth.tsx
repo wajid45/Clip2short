@@ -6,6 +6,8 @@ export interface Me {
   email: string;
   name: string | null;
   authenticatorSince: string | null;
+  /** The app's switch link: opens straight in within an hour of the app sign-in, else asks to sign in again. */
+  appUrl: string;
 }
 
 interface AuthState {

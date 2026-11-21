@@ -46,7 +46,7 @@ export function SiteFooter() {
         <div className="grid gap-12 lg:grid-cols-[1.2fr_2fr]">
           <div>
             <p className="hud text-muted">
-              <span className="text-signal">/</span> Shortlark
+              <span className="text-signal">/</span> Clip2Short
             </p>
             <p className="mt-5 max-w-sm text-[23px] leading-[1.15] tracking-[-0.02em]">
               AI that finds the Shorts and Reels hiding in your long streams, then posts them for you
@@ -71,13 +71,13 @@ export function SiteFooter() {
         </div>
 
         <div className="mt-16 flex justify-end border-t border-line pt-6">
-          <p className="hud text-faint">© {new Date().getFullYear()} Shortlark. All rights reserved.</p>
+          <p className="hud text-faint">© {new Date().getFullYear()} Clip2Short. All rights reserved.</p>
         </div>
       </div>
 
       {/* The wordmark, set as large as the page allows and cropped by the bottom edge. */}
       <p className="footer-mark pointer-events-none select-none" aria-hidden="true">
-        shortlark
+        clip2short
       </p>
     </footer>
   );

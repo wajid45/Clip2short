@@ -7,16 +7,24 @@ from fastapi import Depends, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import RedirectResponse
 from pydantic import Field, field_validator
-from sqlalchemy import delete, select, update
-from sqlalchemy.orm import Session
 
-from ..auth import assert_can_connect_account, assert_can_queue_posts, current_user, has_access, require_subscriber, require_user
+from ..auth import (
+    assert_can_connect_account,
+    assert_can_queue_posts,
+    assert_feature,
+    assert_network_allowed,
+    current_user,
+    has_access,
+    require_subscriber,
+    require_user,
+)
 from ..background import after
 from ..config import settings
 from ..db import SessionLocal, get_db, utcnow
 from ..http import HttpError, json_response, validate
 from ..integrations import load_integrations
 from ..models import Clip, OAuthState, Post, SocialAccount, User
+from ..odm import Session, delete, select, update
 from ..security import random_token, sha256_base64url
 from ..social.base import PLATFORMS, PublishError, platform_length
 from ..social.providers import account_context, finish_url, get_provider, redirect_uri_for, save_accounts
@@ -24,7 +32,7 @@ from ..social.publisher import publish_post
 from ..social.youtube import YT_CHUNK, set_privacy, start_upload, upload_chunk, youtube_url
 from .common import IsoDateTime, JsonBody, Model, api_router, not_found, text
 
-log = logging.getLogger("shortlark.posts")
+log = logging.getLogger("clip2short.posts")
 router = api_router()
 
 
@@ -63,6 +71,8 @@ def create_posts(body: JsonBody, user: User = Depends(require_subscriber), s: Se
         raise HttpError(400, "Unknown account.")
 
     when = b.scheduledAt
+    if when:
+        assert_feature(user, "scheduling")
     now = utcnow()
     if when and when < now - timedelta(minutes=1):
         raise HttpError(400, "That time is in the past.")
@@ -76,6 +86,7 @@ def create_posts(body: JsonBody, user: User = Depends(require_subscriber), s: Se
             raise HttpError(400, "YouTube needs a video file. Use the YouTube upload form on the clip.")
         if acc.status != "active":
             raise HttpError(400, f"{info['label']} ({acc.displayName}) needs to be reconnected.")
+        assert_network_allowed(user, acc.platform)
         if platform_length(acc.platform, t.text) > info["maxChars"]:
             raise HttpError(400, f"{info['label']} posts are limited to {info['maxChars']} characters.")
         if info["needsImage"] and not clip.video.thumbnailUrl:
@@ -120,6 +131,7 @@ def post_status(post_id: str, user: User = Depends(require_user), s: Session = D
 
 @router.post("/posts/{post_id}")
 def post_now(post_id: str, user: User = Depends(require_user), s: Session = Depends(get_db)):
+    assert_feature(user, "posting")
     """Post now (for queued/scheduled posts) or retry (for failed posts)."""
     p = _own_post(s, user, post_id)
     if not p:
@@ -197,7 +209,7 @@ def connect(platform: str, request: Request, s: Session = Depends(get_db)):
         save_accounts(s, user.id, "sandbox", provider.exchange(code="", redirect_uri=""))
         return back("Sandbox account added.", True)
     try:
-        assert_can_connect_account(s, user)
+        assert_can_connect_account(s, user, platform)
     except HttpError as e:
         return back(e.message)
 
@@ -307,6 +319,8 @@ def start_youtube_upload(body: JsonBody, user: User = Depends(require_subscriber
     if account.status != "active":
         raise HttpError(400, "This YouTube channel needs to be reconnected.")
     when = b.scheduledAt
+    if when:
+        assert_feature(user, "scheduling")
     now = utcnow()
     if when and when < now + timedelta(minutes=5):
         raise HttpError(400, "Schedule YouTube uploads at least 5 minutes ahead.")

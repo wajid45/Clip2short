@@ -1,4 +1,5 @@
 import { useRouter } from "@/lib/nav";
+import { apiUrl } from "@/lib/client";
 import { useEffect, useRef } from "react";
 
 /** Polls the video's pipeline state and refreshes the server-rendered page when it changes. */
@@ -14,7 +15,7 @@ export function VideoPoller({ id, active, signature }: { id: string; active: boo
     const tick = async () => {
       if (stop) return;
       try {
-        const r = await fetch(`/api/videos/${id}`, { cache: "no-store" });
+        const r = await fetch(apiUrl(`/api/videos/${id}`), { cache: "no-store", credentials: "include" });
         if (r.ok) {
           const v = await r.json();
           const sig = `${v.captionStatus}|${v.analysisStatus}|${v.clipCount}`;

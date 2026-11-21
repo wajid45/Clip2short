@@ -1,11 +1,9 @@
-"""Tests run against a throwaway SQLite database, never the development one."""
+"""Tests run against a throwaway in-memory MongoDB (mongomock), never the real cluster."""
 
 import os
-import tempfile
-from pathlib import Path
 
-_tmp = Path(tempfile.mkdtemp(prefix="shortlark-test-"))
-os.environ["DATABASE_URL"] = f"sqlite:///{(_tmp / 'test.db').as_posix()}"
+os.environ["MONGODB_URI"] = "mongomock://"
+os.environ["MONGODB_DB"] = "shortlark_test"
 os.environ["INTERNAL_SCHEDULER"] = "false"
 os.environ["GEMINI_API_KEY"] = ""
 os.environ["RESEND_API_KEY"] = ""
@@ -15,9 +13,7 @@ os.environ["PASSWORD_BREACH_CHECK"] = "false"
 import pytest  # noqa: E402
 
 import app.models  # noqa: E402,F401
-from app.db import Base, SessionLocal, engine  # noqa: E402
-
-Base.metadata.create_all(engine)
+from app.db import SessionLocal  # noqa: E402
 
 
 @pytest.fixture

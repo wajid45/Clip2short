@@ -7,7 +7,7 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-log = logging.getLogger("shortlark.background")
+log = logging.getLogger("clip2short.background")
 _pool = ThreadPoolExecutor(max_workers=8, thread_name_prefix="after")
 
 

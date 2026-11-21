@@ -5,19 +5,17 @@ from __future__ import annotations
 import logging
 from datetime import timedelta
 
-from sqlalchemy import func, or_, select, update
-from sqlalchemy.orm import Session
-
 from ..config import settings
 from ..db import SessionLocal, utcnow
 from ..integrations import load_integrations
 from ..models import Clip, Post
+from ..odm import Session, func, or_, select, update
 from ..video.source import timestamp_url
 from .base import AccountContext, PublishError, PublishInput, PublishResult
 from .providers import account_context, get_provider
 from .youtube import get_video, set_privacy, youtube_url
 
-log = logging.getLogger("shortlark.publisher")
+log = logging.getLogger("clip2short.publisher")
 MAX_ATTEMPTS = 3
 
 

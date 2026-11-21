@@ -3,3 +3,27 @@
 /* Tailwind only scans this package by default; include the shared brand components. */
 @source "../../shared/src";
 
+/* The app is set in Playfair Display, like the landing page (loaded in index.html). */
+@theme {
+  --font-sans: "Playfair Display", "Times New Roman", Georgia, serif;
+  --font-display: "Playfair Display", "Times New Roman", Georgia, serif;
+  /* Numbers, timecodes and codes in Playfair too (tabular figures come from .tc / .num). */
+  --font-mono: "Playfair Display", "Times New Roman", Georgia, serif;
+}
+
+
+/* Light mode: a soft ice-blue page behind white cards. Cards keep --color-surface (white). */
+:root[data-theme="light"] {
+  --color-bg: #f4f8fc;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --color-bg: #f4f8fc;
+  }
+}
+
+/* Counts and amounts: Playfair with even-width figures, so columns line up (as in the admin portal). */
+.num {
+  font-family: var(--font-display);
+  font-variant-numeric: lining-nums tabular-nums;
+}

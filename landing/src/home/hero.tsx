@@ -58,11 +58,11 @@ export function Hero() {
           className="display hero-title text-[clamp(40px,8.6vw,140px)]"
           delay={0}
           stagger={22}
-          parts={["Six hour streams\n", { text: "Forty second", className: "text-sunset font-display italic" }, " hits"]}
+          parts={["Long streams\n", { text: "Main character", className: "text-sunset font-display italic" }, " clips"]}
         />
 
         <p className="mt-8 flex flex-wrap items-baseline justify-center gap-x-[0.3em] text-[clamp(17px,1.8vw,22px)] leading-snug text-muted">
-          <span className="sr-only">Shortlark finds, scores, trims, captions and posts the best moments of your long videos.</span>
+          <span className="sr-only">Clip2Short finds, scores, trims, captions and posts the best moments of your long videos.</span>
           <span aria-hidden="true">AI that</span>
           <CycleWord words={VERBS} />
           <span aria-hidden="true">the moments worth posting.</span>

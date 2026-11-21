@@ -23,7 +23,7 @@ export function DayGroups({ items }: { items: { id: string; at: string; node: Re
           <div className="md:pt-3">
             <LocalDayHeading iso={list[0].at} />
           </div>
-          <ul className="divide-y divide-line rounded-xl border border-line">
+          <ul className="divide-y divide-line rounded-xl border border-line bg-surface">
             {list.map((it) => (
               <li key={it.id}>{it.node}</li>
             ))}

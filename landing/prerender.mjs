@@ -2,12 +2,12 @@
 // so search engines and link previews get full content without running JavaScript. Also writes
 // sitemap.xml and robots.txt, a canonical URL per page, and structured data (JSON-LD).
 //
-// SITE_URL is the public origin of the landing site, e.g. https://shortlark.com (no trailing slash).
+// SITE_URL is the public origin of the landing site, e.g. https://clip2short.com (no trailing slash).
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
-const SITE = (process.env.SITE_URL || "https://shortlark.com").replace(/\/$/, "");
+const SITE = (process.env.SITE_URL || "https://clip2short.com").replace(/\/$/, "");
 if (!process.env.SITE_URL) console.warn(`[prerender] SITE_URL not set; using ${SITE} for canonical links and the sitemap`);
 
 const template = await readFile(`${root}dist/index.html`, "utf8");

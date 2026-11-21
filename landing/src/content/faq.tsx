@@ -8,7 +8,7 @@ export const FAQ_GROUPS: { id: string; title: string; items: QA[] }[] = [
     title: "Getting started",
     items: [
       {
-        q: "Who is Shortlark for?",
+        q: "Who is Clip2Short for?",
         a: "Clippers, streamers and editors who turn long streams, podcasts and videos into Shorts and Reels. Paste a VOD and get a ranked list of moments with timecodes, hooks and captions in minutes instead of hours of scrubbing.",
       },
       {
@@ -21,11 +21,11 @@ export const FAQ_GROUPS: { id: string; title: string; items: QA[] }[] = [
       },
       {
         q: "Do you cut the video for me?",
-        a: "For direct video files, yes: download any clip as an MP4, in its original shape or cropped to vertical 9:16. YouTube and Vimeo don't allow their videos to be downloaded, so for those Shortlark gives you exact in and out points to cut in your editor, and posts with a link that opens the original at the right second.",
+        a: "For direct video files, yes: download any clip as an MP4, in its original shape or cropped to vertical 9:16. YouTube and Vimeo don't allow their videos to be downloaded, so for those Clip2Short gives you exact in and out points to cut in your editor, and posts with a link that opens the original at the right second.",
       },
       {
         q: "What if a video has no captions?",
-        a: "Shortlark tries creator captions, auto-captions, translations and Vimeo text tracks, then an AI fetch agent. If none work, paste a transcript. Every clip shows whether its timing is exact or estimated.",
+        a: "Clip2Short tries creator captions, auto-captions, translations and Vimeo text tracks, then an AI fetch agent. If none work, paste a transcript. Every clip shows whether its timing is exact or estimated.",
       },
     ],
   },
@@ -35,7 +35,7 @@ export const FAQ_GROUPS: { id: string; title: string; items: QA[] }[] = [
     items: [
       {
         q: "How do credits work?",
-        a: `1 credit = 1 minute of video the AI analyses, so a 2-hour stream uses 120 credits. Running it again on the same video costs a quarter of that, and failed analyses are refunded automatically. Posting and scheduling are always free. New accounts get ${TRIAL.credits} free credits for ${TRIAL.days} days, no card needed.`,
+        a: `1 credit = 1 minute of video the AI analyses, so a 2-hour stream uses 120 credits. Running it again on the same video costs a quarter of that, and failed analyses are refunded automatically. Posting never costs credits. New accounts get ${TRIAL.credits} free credits for ${TRIAL.days} days, no card needed.`,
       },
       {
         q: "Do unused plan credits roll over?",

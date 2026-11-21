@@ -7,13 +7,12 @@ from datetime import UTC, datetime
 from typing import Any
 
 import stripe
-from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 from .config import settings
 from .models import User
+from .odm import Session, select
 
-log = logging.getLogger("shortlark.billing")
+log = logging.getLogger("clip2short.billing")
 
 
 def stripe_client() -> stripe.StripeClient:

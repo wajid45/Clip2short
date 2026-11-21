@@ -44,7 +44,7 @@ export function OtpInput({ value, onChange, onComplete, autoFocus }: { value: st
             e.preventDefault();
             set(e.clipboardData.getData("text"));
           }}
-          className="tc h-14 w-full min-w-0 rounded-xl border border-line-strong bg-surface text-center text-[22px] text-text transition-[border-color,box-shadow] hover:border-faint focus:border-signal focus:ring-3 focus:ring-signal/20 focus:outline-none dark:border-[#47474f] dark:bg-surface-2"
+          className="h-14 w-full min-w-0 rounded-xl border border-line-strong bg-surface text-center text-[22px] text-text transition-[border-color,box-shadow] hover:border-faint focus:border-signal focus:ring-3 focus:ring-signal/20 focus:outline-none dark:border-[#4a4b55] dark:bg-surface-2"
         />
       ))}
     </div>

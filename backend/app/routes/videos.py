@@ -6,19 +6,18 @@ from typing import Literal
 
 from fastapi import Depends, Request
 from pydantic import Field
-from sqlalchemy import func, select, update
-from sqlalchemy.orm import Session
 
 from ..ai.client import ai_configured
 from ..ai.clipper import FOCUSES
 from ..ai.engines import CATEGORY_IDS
-from ..auth import require_subscriber, require_user
+from ..auth import assert_engine_allowed, require_subscriber, require_user
 from ..background import after
 from ..captions.parse import parse_pasted_transcript
 from ..credits import credit_summary
 from ..db import get_db
 from ..http import HttpError, json_response, validate
 from ..models import Clip, User, Video
+from ..odm import Session, func, select, update
 from ..plans import analysis_cost, has_active_subscription, limits_for
 from ..ratelimit import rate_limit
 from ..video.fetcher import assert_public_url
@@ -26,7 +25,7 @@ from ..video.pipeline import get_segments, process_video, resolve_metadata, run_
 from ..video.source import SourceError, parse_video_url
 from .common import JsonBody, Model, api_router, not_found, text
 
-log = logging.getLogger("shortlark.videos")
+log = logging.getLogger("clip2short.videos")
 router = api_router()
 
 
@@ -67,6 +66,7 @@ def import_video(request: Request, body: JsonBody, user: User = Depends(require_
     b = validate(ImportBody, body)
     if not b.category:
         raise HttpError(400, "category: Choose what kind of video this is, so the right AI engine finds its highlights.")
+    assert_engine_allowed(user, b.category)
     try:
         parsed = parse_video_url(b.url)
     except SourceError as e:
@@ -84,8 +84,8 @@ def import_video(request: Request, body: JsonBody, user: User = Depends(require_
         raise HttpError(422, str(e)) from None
 
     limits = limits_for(user)
-    if meta.durationSec and meta.durationSec > limits["maxVideoMinutes"] * 60:
-        who = "Your plan" if has_active_subscription(user) else "Without a plan, Shortlark"
+    if meta.durationSec and limits["maxVideoMinutes"] and meta.durationSec > limits["maxVideoMinutes"] * 60:
+        who = "Your plan" if has_active_subscription(user) else "Without a plan, Clip2Short"
         raise HttpError(
             402,
             f"This video is {round(meta.durationSec / 60)} minutes long. {who} handles videos up to {limits['maxVideoMinutes']} minutes.",
@@ -179,6 +179,7 @@ def analyze(video_id: str, body: JsonBody = None, user: User = Depends(require_s
     video = _own_video(s, user, video_id)
     # Re-running can switch the category (and so the AI engine).
     if isinstance(body, dict) and body.get("category") in CATEGORY_IDS:
+        assert_engine_allowed(user, body["category"])
         video.category = body["category"]
     if not ai_configured():
         raise HttpError(503, "AI analysis isn't configured on this server.")

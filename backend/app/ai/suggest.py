@@ -76,6 +76,7 @@ Write the posting copy for this clip."""
         thinking="medium",
         refusal_message="The AI declined to write copy for this clip.",
         max_output_tokens=16000,
+        purpose="suggest",
     )
     out = s.model_dump()
     out["hashtags"] = [t for t in (re.sub(r"\s+", "", h.lstrip("#")) for h in s.hashtags) if t][:8]

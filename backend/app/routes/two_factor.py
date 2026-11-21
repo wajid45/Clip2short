@@ -16,7 +16,6 @@ import time
 
 import jwt
 from fastapi import Depends, Request
-from sqlalchemy.orm import Session
 
 from .. import notify
 from ..auth import require_user
@@ -25,6 +24,7 @@ from ..config import require_secret
 from ..db import get_db, utcnow
 from ..http import HttpError, json_response, validate
 from ..models import User, UserTwoFactor
+from ..odm import Session
 from ..portal import match_totp, new_totp_secret, otpauth_url
 from ..ratelimit import rate_limit, rate_limit_account
 from ..security import decrypt, encrypt, set_session, verify_password
@@ -32,7 +32,7 @@ from .common import JsonBody, Model, api_router, text
 
 router = api_router()
 
-ISSUER = "Shortlark"
+ISSUER = "Clip2Short"
 CHALLENGE_TTL = 5 * 60  # minutes to type the code after the password
 RECOVERY_CODES = 10
 BAD_CODE = "That code doesn't match. Use the newest code from your authenticator app, or a backup code."
@@ -132,7 +132,7 @@ def login_code(request: Request, body: JsonBody, s: Session = Depends(get_db)):
     res = json_response({"ok": True, "backupCodesLeft": len(row.recoveryHashes.split()) if used == "recovery" else None})
     set_session(res, user.id, user.sessionVersion)
     if used == "recovery":
-        after(notify.security_change, user.id, "A backup code was used to sign in", "One of your two-factor backup codes was just used to sign in to Shortlark.")
+        after(notify.security_change, user.id, "A backup code was used to sign in", "One of your two-factor backup codes was just used to sign in to Clip2Short.")
     return res
 
 
@@ -193,7 +193,7 @@ def confirm(request: Request, body: JsonBody, user: User = Depends(require_user)
     row.secretEnc, row.pendingSecretEnc, row.enabledAt, row.lastStep, row.recoveryHashes = row.pendingSecretEnc, None, utcnow(), step, hashes
     user.sessionVersion += 1  # sessions on other devices end: they signed in without the second step
     s.commit()
-    after(notify.security_change, user.id, "Two-factor sign-in is on", "Two-factor sign-in was turned on for your Shortlark account. Signing in now also needs a code from your authenticator app.")
+    after(notify.security_change, user.id, "Two-factor sign-in is on", "Two-factor sign-in was turned on for your Clip2Short account. Signing in now also needs a code from your authenticator app.")
     res = json_response({"ok": True, "backupCodes": shown})
     set_session(res, user.id, user.sessionVersion)
     return res
@@ -211,7 +211,7 @@ def disable(request: Request, body: JsonBody, user: User = Depends(require_user)
         raise HttpError(400, BAD_CODE, "bad_code")
     s.delete(row)
     s.commit()
-    after(notify.security_change, user.id, "Two-factor sign-in is off", "Two-factor sign-in was turned off for your Shortlark account. Signing in now needs only your password.")
+    after(notify.security_change, user.id, "Two-factor sign-in is off", "Two-factor sign-in was turned off for your Clip2Short account. Signing in now needs only your password.")
     return json_response({"ok": True})
 
 
@@ -228,5 +228,5 @@ def regenerate(request: Request, body: JsonBody, user: User = Depends(require_us
         raise HttpError(400, BAD_CODE, "bad_code")
     shown, row.recoveryHashes = new_recovery_codes()
     s.commit()
-    after(notify.security_change, user.id, "New backup codes", "New two-factor backup codes were created for your Shortlark account. The old ones no longer work.")
+    after(notify.security_change, user.id, "New backup codes", "New two-factor backup codes were created for your Clip2Short account. The old ones no longer work.")
     return json_response({"ok": True, "backupCodes": shown})

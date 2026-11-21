@@ -4,64 +4,129 @@
     "days": 14
   },
   "baseLimits": {
-    "maxVideoMinutes": 120,
+    "maxVideoMinutes": 60,
     "socialAccounts": 2,
-    "scheduledPosts": 15
+    "scheduledPosts": 3,
+    "captions": false,
+    "posting": false,
+    "postAnalytics": false,
+    "networks": [
+      "youtube"
+    ],
+    "scheduling": false,
+    "engines": [
+      "podcast",
+      "gaming"
+    ]
   },
   "plans": [
     {
       "id": "creator",
       "name": "Creator",
-      "price": 24,
-      "monthlyCredits": 250,
+      "price": 49,
+      "monthlyCredits": 550,
       "tagline": "For a weekly stream or podcast.",
       "limits": {
-        "maxVideoMinutes": 180,
-        "socialAccounts": 3,
-        "scheduledPosts": 30
+        "maxVideoMinutes": 120,
+        "socialAccounts": 5,
+        "scheduledPosts": 5,
+        "captions": false,
+        "posting": true,
+        "scheduling": false,
+        "postAnalytics": false,
+        "networks": [
+          "youtube"
+        ],
+        "engines": [
+          "podcast",
+          "gaming",
+          "other"
+        ]
       },
       "features": [
-        "250 credits every month (4 hours of video)",
-        "Videos up to 3 hours",
-        "3 connected social accounts",
-        "30 posts in the queue"
+        "550 credits every month (9.2 hours of video)",
+        "Videos up to 2 hours",
+        "5 connected accounts on YouTube",
+        "5 posts in the queue",
+        "Podcast, gaming and other engines",
+        "Posting"
       ]
     },
     {
       "id": "pro",
       "name": "Pro",
-      "price": 54,
-      "monthlyCredits": 500,
+      "price": 99,
+      "monthlyCredits": 1200,
       "tagline": "For daily streamers and busy clippers.",
       "highlight": true,
       "limits": {
-        "maxVideoMinutes": 360,
+        "maxVideoMinutes": 180,
         "socialAccounts": 10,
-        "scheduledPosts": 300
+        "scheduledPosts": 10,
+        "captions": true,
+        "posting": true,
+        "scheduling": true,
+        "postAnalytics": false,
+        "networks": [
+          "youtube",
+          "facebook"
+        ],
+        "engines": [
+          "podcast",
+          "gaming",
+          "movies",
+          "sports",
+          "other"
+        ]
       },
       "features": [
-        "500 credits every month (8 hours)",
-        "Videos up to 6 hours",
-        "10 connected social accounts",
-        "300 posts in the queue"
+        "1,200 credits every month (20 hours of video)",
+        "Videos up to 3 hours",
+        "10 connected accounts on YouTube and Facebook",
+        "10 posts in the queue",
+        "All five category engines",
+        "AI hooks and captions per network",
+        "Posting",
+        "Scheduling"
       ]
     },
     {
       "id": "studio",
       "name": "Studio",
-      "price": 129,
-      "monthlyCredits": 1550,
+      "price": 199,
+      "monthlyCredits": 2550,
       "tagline": "For agencies running many channels.",
       "limits": {
-        "maxVideoMinutes": 600,
+        "maxVideoMinutes": null,
         "socialAccounts": 40,
-        "scheduledPosts": 2000
+        "scheduledPosts": 30,
+        "captions": true,
+        "posting": true,
+        "scheduling": true,
+        "postAnalytics": true,
+        "networks": [
+          "youtube",
+          "facebook",
+          "instagram"
+        ],
+        "engines": [
+          "podcast",
+          "gaming",
+          "movies",
+          "sports",
+          "other"
+        ]
       },
       "features": [
-        "1,550 credits every month (25 hours)",
-        "Videos up to 10 hours",
-        "40 connected social accounts",
-        "2,000 posts in the queue"
+        "2,550 credits every month (42.5 hours of video)",
+        "Videos of any length",
+        "40 connected accounts on YouTube, Facebook and Instagram",
+        "30 posts in the queue",
+        "All five category engines",
+        "AI hooks and captions per network",
+        "Posting",
+        "Scheduling",
+        "Analytics per post"
       ]
     }
   ],
